@@ -1,0 +1,54 @@
+﻿@page "/"
+
+<PageTitle>ADAPH | Cardano Tx Submit Service</PageTitle>
+
+<MudContainer Class="mt-8">
+	<MudGrid Spacing="2" Justify="Justify.Center">
+		<MudItem xs="12" md="4">
+			<MudPaper Class="d-flex align-center flex-column justify-center mud-width-full pa-4" Elevation="3">
+				<MudAvatar Color="Color.Primary" Variant="Variant.Outlined">
+					<MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Primary" Size="Size.Large" />
+				</MudAvatar>
+				<MudText Typo="Typo.h6" Align="Align.Center">Pending Txes</MudText>
+				<MudDivider DividerType="DividerType.Middle" Class="my-1" />
+				<MudText Typo="Typo.h3" Align="Align.Center">@TotalPendingTxesCount</MudText>
+				<MudText Typo="Typo.subtitle1" Align="Align.Center">Overall</MudText>
+			</MudPaper>
+		</MudItem>
+		<MudItem xs="12" md="4">
+			<MudPaper Class="d-flex flex-column align-center justify-center mud-width-full pa-4" Elevation="3">
+				<MudAvatar Color="Color.Primary" Variant="Variant.Outlined">
+					<MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Primary" Size="Size.Large" />
+				</MudAvatar>
+				<MudText Typo="Typo.h6" Align="Align.Center">Confirmed Txes</MudText>
+				<MudDivider DividerType="DividerType.Middle" Class="my-1" />
+				<MudText Typo="Typo.h3" Align="Align.Center">@TotalConfirmedTxesCount</MudText>
+				<MudText Typo="Typo.subtitle1" Align="Align.Center">1 Hour</MudText>
+			</MudPaper>
+		</MudItem>
+		<MudItem xs="12" md="4">
+			<MudPaper Class="d-flex flex-column align-center justify-center mud-width-full pa-4" Elevation="3">
+				<MudAvatar Color="Color.Primary" Variant="Variant.Outlined">
+					<MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Primary" Size="Size.Large" />
+				</MudAvatar>
+				<MudText Typo="Typo.h6" Align="Align.Center">Average Confirmation Time (est.)</MudText>
+				<MudDivider DividerType="DividerType.Middle" Class="my-1" />
+				<MudText Typo="Typo.h3" Align="Align.Center">@FormatTimeSpan(AverageConfirmationTime)</MudText>
+				<MudText Typo="Typo.subtitle1" Align="Align.Center">1 Hour</MudText>
+			</MudPaper>
+		</MudItem>
+	</MudGrid>
+	<MudHidden Breakpoint="Breakpoint.SmAndUp" Invert="true">
+		<MudPaper Class="d-flex align-center flex-column justify-center mt-4 pa-4" Elevation="3">
+			<MudChart ChartType="ChartType.Line" ChartSeries="@Series" SelectedIndex="0" XAxisLabels="@XAxisLabels" Width="100%" Height="450px" ChartOptions="chartOptions"></MudChart>
+		</MudPaper>
+	</MudHidden>
+	<MudHidden Breakpoint="Breakpoint.SmAndUp" Invert="false">
+		<MudPaper Class="d-flex align-center flex-column justify-center mt-4 pa-4" Elevation="3">
+			<MudChart ChartType="ChartType.Line" ChartSeries="@Series" SelectedIndex="0" XAxisLabels="@XAxisLabels" Width="100%" Height="100%" ChartOptions="chartOptions"></MudChart>
+		</MudPaper>
+	</MudHidden>
+	<MudPaper Class="d-flex align-center flex-column justify-center mt-4 pa-4 mb-4 overflow-hidden" Elevation="3">
+		<MudText Typo="Typo.h6" Align="Align.Center" Class="word-break">Set your wallet submission node to: <i>https://submit.adaph.io/api/v1.0/tx/submit</i></MudText>
+	</MudPaper>
+</MudContainer>

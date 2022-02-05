@@ -1,0 +1,20 @@
+﻿@inherits LayoutComponentBase
+
+<PageTitle>ADAPH | Cardano Tx Submit Service</PageTitle>
+<MudThemeProvider @bind-IsDarkMode="@IsDarkMode" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudAppBar Color="Color.Primary" Fixed="false" Class="d-flex">
+	<AdaphLogo IsDarkMode="@IsDarkMode" />
+	<MudHidden Breakpoint="Breakpoint.MdAndUp" Invert="true">
+		<MudText Typo="Typo.h6" Class="mr-auto ml-4">Cardano Tx Submit Service</MudText>
+	</MudHidden>
+	<MudHidden Breakpoint="Breakpoint.MdAndUp" Invert="false">
+		<MudText Typo="Typo.subtitle2" Class="mr-auto ml-4" Align="Align.Center">Cardano Tx Submit Service</MudText>
+	</MudHidden>
+	<MudSpacer />
+	<MudSwitch Checked="@IsDarkMode" T="bool" Color="Color.Warning"
+		ThumbIcon="@(IsDarkMode ? @Icons.Filled.DarkMode : Icons.Filled.LightMode)" Class="flex-shrink-1 -mr-4" CheckedChanged="@OnThemeChanged"/>
+</MudAppBar>
+
+@Body
