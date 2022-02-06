@@ -18,7 +18,7 @@ A micro-service that accepts Cardano transactions and relays it to [cardano-subm
 ### Assumptions
 
 This guide assumes:
-- That you have compiled `cardano-node` and fully synced to your intended network.
+- That you have compiled `cardano-node`, you have it running and fully synced to your intended network.
 - That you have compiled `cardano-submit-api`, It is compiled along when you do `cabal build all` the `cardano-node` repository.
 - That you have a running `postgresql` instance.
 - Signed up for a free `Blockfrost API` account for the intended network.
