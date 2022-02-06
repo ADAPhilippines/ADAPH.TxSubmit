@@ -89,7 +89,7 @@ Find the file `appsettings.sample.json` and rename it to `appsettings.json`
   },
   "AllowedHosts": "*",
   "ConnectionStrings": {
-    "TxSubmitDb": "<postgresql connection string>"
+    "TxSubmitDb": "Host=<ip>;Port=<port>;Database=<database name>;Username=<username>;Password=<password>"
   },
   "CardanoTxSubmitEndpoint": "http://localhost:8090/api/submit/tx",
   "BlockfrostProjectId": "<blockfrost project id>",
