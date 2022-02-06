@@ -1,6 +1,6 @@
 # Cardano Tx Submission Service
 
-A micro-service that accepts Cardano transactions and relays it to [cardano-submit-api](https://github.com/input-output-hk/cardano-node/tree/master/cardano-submit-api). The goal is to intercept the transaction and provide statistics / customization on how to handle the relay flow. 
+A micro-service that accepts Cardano transactions and relays it to [cardano-submit-api](https://github.com/input-output-hk/cardano-node/tree/master/cardano-submit-api). The goal is to intercept the transaction and provide statistics / customization on how to handle the submission flow. 
 
  ![ADAPH-TX-SUBMIT](/wwwroot/images/tx-submit.png)
 
