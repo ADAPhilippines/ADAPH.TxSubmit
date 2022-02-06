@@ -1,6 +1,6 @@
 # Cardano Tx Submission Service
 
-A micro-service that accepts Cardano transactions and relays it to [cardano-submit-api](https://github.com/input-output-hk/cardano-node/tree/master/cardano-submit-api). The goal is to intercept the transaction and provide statistics / customization on how to handle the relay flow. 
+A micro-service that accepts Cardano transactions and relays it to [cardano-submit-api](https://github.com/input-output-hk/cardano-node/tree/master/cardano-submit-api). The goal is to intercept the transaction and provide statistics / customization on how to handle the submission flow. 
 
  ![ADAPH-TX-SUBMIT](/wwwroot/images/tx-submit.png)
 
@@ -18,14 +18,14 @@ A micro-service that accepts Cardano transactions and relays it to [cardano-subm
 ### Assumptions
 
 This guide assumes:
-- That you have compiled `cardano-node` and fully synced to your intended network.
+- That you have compiled `cardano-node`, you have it running and fully synced to your intended network.
 - That you have compiled `cardano-submit-api`, It is compiled along when you do `cabal build all` the `cardano-node` repository.
 - That you have a running `postgresql` instance.
 - Signed up for a free `Blockfrost API` account for the intended network.
 
 ### .NET 6 SDK
 
-#### dependencies
+#### OS Dependencies
 ```bash
 sudo apt install -y libc6 libgcc1 libgssapi-krb5-2 libicu67 libssl1.1 libstdc++6 zlib1g build-essential
 ```
@@ -123,7 +123,7 @@ If everything went well, you should see something like this:
 2|ADAPH.TxSubmit  | info: Microsoft.Hosting.Lifetime[0]
 ```
 
-Congratulations you can now submit transactions via `http://localhost:1337/api/v1.0/tx/submit` 🚀🚀🚀!
+Congratulations you can now submit transactions via `http://localhost:1337/api/v1.0/tx/submit` 🚀🚀🚀
 
 You can setup a reverse proxy webserver if you want to serve this publicly.
 
