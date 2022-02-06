@@ -42,13 +42,15 @@ export PATH=$PATH:$HOME/dotnet
 #### Check if .NET is installed properly
 
 ```bash
-// reload shell
+# reload shell
 exec bash
-//or
+#or
 exec zsh
-// check version
+# check version
 dotnet --version
-> 6.0.101
+#> 6.0.101
+# install entity framework core global command line tool
+dotnet tool install --global dotnet-ef
 ```
 
 #### Running `cardano-submit-api`
@@ -96,6 +98,12 @@ Find the file `appsettings.sample.json` and rename it to `appsettings.json`
 ```
 
 Replace the values as necessary.
+
+
+#### Seed the database
+```
+dotnet ef database update
+```
 
 #### Build & Run the code
 
