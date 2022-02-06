@@ -115,7 +115,7 @@ If everything went well, you should see something like this:
 2|ADAPH.TxSubmit  | info: Microsoft.Hosting.Lifetime[0]
 ```
 
-Congratulations you can now submit transactions via `http://localhost:1337/api/v1.0/tx/submit` 🚀🚀🚀!
+Congratulations you can now submit transactions via `http://localhost:1337/api/v1.0/tx/submit` 🚀🚀🚀
 
 You can setup a reverse proxy webserver if you want to serve this publicly.
 
