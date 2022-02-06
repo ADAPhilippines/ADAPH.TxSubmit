@@ -25,7 +25,7 @@ This guide assumes:
 
 ### .NET 6 SDK
 
-#### dependencies
+#### OS Dependencies
 ```bash
 sudo apt install -y libc6 libgcc1 libgssapi-krb5-2 libicu67 libssl1.1 libstdc++6 zlib1g build-essential
 ```
