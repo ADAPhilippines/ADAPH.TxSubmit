@@ -33,7 +33,9 @@ sudo apt install -y libc6 libgcc1 libgssapi-krb5-2 libssl1.1 libstdc++6 zlib1g b
 #### Install .NET ***6.0.101***
 
 ```bash
+wget https://download.visualstudio.microsoft.com/download/pr/ede8a287-3d61-4988-a356-32ff9129079e/bdb47b6b510ed0c4f0b132f7f4ad9d5a/dotnet-sdk-6.0.101-linux-x64.tar.gz
 mkdir -p $HOME/dotnet && tar zxf dotnet-sdk-6.0.101-linux-x64.tar.gz -C $HOME/dotnet
+rm dotnet-sdk-6.0.101-linux-x64.tar.gz
 # Add this to your .bashrc or .zshrc
 export DOTNET_ROOT=$HOME/dotnet
 export PATH=$PATH:$HOME/dotnet
