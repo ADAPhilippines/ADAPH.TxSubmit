@@ -39,6 +39,7 @@ rm dotnet-sdk-6.0.101-linux-x64.tar.gz
 # Add this to your .bashrc or .zshrc
 export DOTNET_ROOT=$HOME/dotnet
 export PATH=$PATH:$HOME/dotnet
+export PATH=$PATH:$HOME/.dotnet/tools
 ```
 
 #### Check if .NET is installed properly
