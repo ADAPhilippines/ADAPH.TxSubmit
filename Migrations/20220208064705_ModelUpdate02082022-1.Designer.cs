@@ -3,6 +3,7 @@ using System;
 using ADAPH.TxSubmit.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,10 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ADAPH.TxSubmit.Migrations
 {
     [DbContext(typeof(TxSubmitDbContext))]
-    partial class TxSubmitDbContextModelSnapshot : ModelSnapshot
+    [Migration("20220208064705_ModelUpdate02082022-1")]
+    partial class ModelUpdate020820221
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

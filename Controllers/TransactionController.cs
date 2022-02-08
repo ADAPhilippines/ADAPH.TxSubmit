@@ -13,15 +13,18 @@ public class TransactionController : ControllerBase
   private readonly IHttpClientFactory _httpClientFactory;
   private readonly IConfiguration _configuration;
   private readonly TxSubmitDbContext _dbContext;
+  private readonly TransactionService _transactionService;
 
   public TransactionController(
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
-    TxSubmitDbContext dbContext)
+    TxSubmitDbContext dbContext,
+    TransactionService transactionService)
   {
     _httpClientFactory = httpClientFactory;
     _configuration = configuration;
     _dbContext = dbContext;
+    _transactionService = transactionService;
   }
 
   [HttpPost]
@@ -30,22 +33,21 @@ public class TransactionController : ControllerBase
     using var client = _httpClientFactory.CreateClient();
     using var ms = new MemoryStream();
     await Request.Body.CopyToAsync(ms);
-    var byteContent = new ByteArrayContent(ms.ToArray());
-    byteContent.Headers.ContentType = new MediaTypeHeaderValue("application/cbor");
-    var txResponse = await client.PostAsync(_configuration["CardanoTxSubmitEndpoint"], byteContent);
-    if (!txResponse.IsSuccessStatusCode) return BadRequest();
-    var txIdResponse = await txResponse.Content.ReadFromJsonAsync<JsonElement>();
-    var txId = txIdResponse.GetString();
-    HttpContext.Response.StatusCode = 202;
+    var txBytes = ms.ToArray();
+    var txId = await _transactionService.SubmitAsync(txBytes);
   
     if (txId != null)
     {
       var tx = new Transaction
       {
-        TxHash = txId
+        TxHash = txId,
+        TxBytes = txBytes,
+        TxSize = txBytes.Length
       };
       _dbContext.Transactions.Add(tx);
       await _dbContext.SaveChangesAsync();
+
+      HttpContext.Response.StatusCode = 202;
       return new JsonResult(txId);
     }
     else

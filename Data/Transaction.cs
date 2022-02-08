@@ -6,4 +6,6 @@ public record Transaction
   public string TxHash { get; set; } = string.Empty;
   public DateTime DateCreated { get; set; } = DateTime.UtcNow;
   public DateTime? DateConfirmed { get; set; } = null;
+  public byte[]? TxBytes { get; set; } = null;
+  public int? TxSize { get; set; } = null;
 }
