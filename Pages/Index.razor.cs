@@ -57,7 +57,7 @@ public partial class Index : IDisposable
 
 		Series.Add(new()
 		{
-			Name = "Txes Submitted",
+			Name = "Txs Submitted",
 			Data = hourlyPendingTxes.Select(d => (double)d.Item2).ToArray()
 		});
 
