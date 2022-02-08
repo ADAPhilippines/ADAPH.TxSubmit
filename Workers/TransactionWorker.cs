@@ -111,7 +111,7 @@ public class TransactionWorker : BackgroundService
         var txId = await _txService.SubmitAsync(tx.TxBytes);
 
         //If tx is resubmitted succesfully, slide DateCreated Value
-        if(txId != null)
+        if(txId is not null && txId.Length == 64)
         {
           _logger.Log(LogLevel.Information, $"Transaction resubmitted: {tx.TxHash}");
           tx.DateCreated = DateTime.UtcNow;

@@ -13,8 +13,9 @@
 		<MudText Typo="Typo.subtitle2" Class="mr-auto ml-4" Align="Align.Center">Cardano Tx Submit Service</MudText>
 	</MudHidden>
 	<MudSpacer />
+	<MudIconButton Icon="@Icons.Custom.Brands.GitHub" Color="Color.Inherit" Link="https://github.com/ADAPhilippines/ADAPH.TxSubmit"/>
 	<MudSwitch Checked="@IsDarkMode" T="bool" Color="Color.Warning"
-		ThumbIcon="@(IsDarkMode ? @Icons.Filled.DarkMode : Icons.Filled.LightMode)" Class="flex-shrink-1 -mr-4" CheckedChanged="@OnThemeChanged"/>
+		ThumbIcon="@(IsDarkMode ? @Icons.Filled.DarkMode : Icons.Filled.LightMode)" Class="flex-shrink-1 -mr-4 theme-switch" CheckedChanged="@OnThemeChanged"/>
 </MudAppBar>
 
 @Body

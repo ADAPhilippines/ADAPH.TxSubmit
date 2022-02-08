@@ -26,6 +26,6 @@ public partial class MainLayout
     IsDarkMode = !IsDarkMode;
     await LocalStorageService.SetItemAsync<bool>("IsDarkMode", IsDarkMode);
     await InvokeAsync(StateHasChanged);
-  }
+	}
 
 }
