@@ -17,6 +17,7 @@ public partial class Index : IDisposable
 	public ChartOptions chartOptions = new ChartOptions();
 	public List<ChartSeries> Series = new List<ChartSeries>();
 	public string[] XAxisLabels = { };
+	public bool IsJsInteropReady = false;
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -34,6 +35,7 @@ public partial class Index : IDisposable
 	{
 		if (firstRender)
 		{
+			IsJsInteropReady = true;
 			if (GlobalStateService is not null)
 				await UpdateValuesAsync();
 		}
@@ -42,6 +44,8 @@ public partial class Index : IDisposable
 
 	private async Task UpdateValuesAsync()
 	{
+		if(!IsJsInteropReady) return;
+		
 		var hourlyPendingTxes = await GetHourlyTxesAsync();
 		var hourlyAverageConfirmationTimes = GetHourlyAverageConfirmationTimes();
 
@@ -67,6 +71,7 @@ public partial class Index : IDisposable
 		chartOptions.ChartPalette = new string[] { "#594ae2ff", "#00c853ff" };
 		await InvokeAsync(StateHasChanged);
 	}
+
 	private async Task<List<(DateTime, int)>> GetHourlyTxesAsync()
 	{
 		var hourlyPendingTxes = new List<(DateTime, int)>();

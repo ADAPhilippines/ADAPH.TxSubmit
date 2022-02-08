@@ -94,9 +94,12 @@ public class DbWorker : BackgroundService
 	{
 		if (dbContext is null) return new();
 
-		var currentDate = DateTime.UtcNow;
+		var currentDate = DateTime.UtcNow + TimeSpan.FromHours(1);
+		var currentDateRounded = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, currentDate.Hour, 0 , 0, DateTimeKind.Utc);
+		currentDateRounded -= TimeSpan.FromSeconds(1);
+		
 		return await dbContext.Transactions
-			.Where(tx => currentDate - tx.DateCreated < TimeSpan.FromHours(12))
+			.Where(tx => currentDateRounded - tx.DateCreated < TimeSpan.FromHours(13))
 			.ToListAsync();
 	}
 
@@ -104,9 +107,11 @@ public class DbWorker : BackgroundService
 	{
 		if (dbContext is null) return new();
 
-		var currentDate = DateTime.UtcNow;
+		var currentDate = DateTime.UtcNow + TimeSpan.FromHours(1);
+		var currentDateRounded = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, currentDate.Hour, 0 , 0, DateTimeKind.Utc);
+		currentDateRounded -= TimeSpan.FromSeconds(1);
 		return await dbContext.Transactions
-			.Where(tx => tx.DateConfirmed != null && currentDate - tx.DateConfirmed < TimeSpan.FromHours(12))
+			.Where(tx => tx.DateConfirmed != null && currentDateRounded - tx.DateConfirmed < TimeSpan.FromHours(13))
 			.ToListAsync();
 	}
 }

@@ -32,14 +32,21 @@ public class TransactionWorker : BackgroundService
   {
     while (!stoppingToken.IsCancellationRequested)
     {
-      var optionsBuilder = new DbContextOptionsBuilder<TxSubmitDbContext>();
-      optionsBuilder.UseNpgsql(_configuration.GetConnectionString("TxSubmitDb"));
-      using var _dbContext = new TxSubmitDbContext(optionsBuilder.Options);
+      try
+      {
+        var optionsBuilder = new DbContextOptionsBuilder<TxSubmitDbContext>();
+        optionsBuilder.UseNpgsql(_configuration.GetConnectionString("TxSubmitDb"));
+        using var _dbContext = new TxSubmitDbContext(optionsBuilder.Options);
 
-      await CheckConfirmedTxAsync(_dbContext, stoppingToken);
-      await CheckUnconfirmedTxsAsync(_dbContext, stoppingToken);
+        await CheckConfirmedTxAsync(_dbContext, stoppingToken);
+        await CheckUnconfirmedTxsAsync(_dbContext, stoppingToken);
 
-      await Task.Delay(1000 * 60, stoppingToken);
+        await Task.Delay(1000 * 60, stoppingToken);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex.Message);
+      }
     }
   }
 
