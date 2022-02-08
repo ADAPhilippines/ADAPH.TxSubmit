@@ -7,6 +7,7 @@ using Blockfrost.Api.Extensions;
 using ADAPH.TxSubmit.Workers;
 using MudBlazor.Services;
 using Blazored.LocalStorage;
+using ADAPH.TxSubmit.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,7 +30,9 @@ builder.Services.AddDbContext<TxSubmitDbContext>(options =>
   options.UseNpgsql(builder.Configuration.GetConnectionString("TxSubmitDb"));
 });
 builder.Services.AddHostedService<TransactionWorker>();
+builder.Services.AddHostedService<DbWorker>();
 builder.Services.AddScoped<TimeZoneService>();
+builder.Services.AddSingleton<GlobalStateService>();
 
 var app = builder.Build();
 

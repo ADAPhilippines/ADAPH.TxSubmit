@@ -3,175 +3,135 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using ADAPH.TxSubmit.Data;
 using MudBlazor;
+using ADAPH.TxSubmit.Services;
+using System.ComponentModel;
 
 namespace ADAPH.TxSubmit.Pages;
 
-public partial class Index
+public partial class Index : IDisposable
 {
-  [Inject] private TxSubmitDbContext? _dbContext { get; set; }
-  [Inject] private ILogger<Index>? _logger { get; set; }
-  [Inject] private TimeZoneService? TimeZoneService { get; set; }
-  public int TotalPendingTxesCount { get; set; }
-  public int TotalConfirmedTxesCount { get; set; }
-  public TimeSpan AverageConfirmationTime { get; set; }
-  public ChartOptions chartOptions = new ChartOptions();
+	[Inject] private TxSubmitDbContext? _dbContext { get; set; }
+	[Inject] private ILogger<Index>? _logger { get; set; }
+	[Inject] private TimeZoneService? TimeZoneService { get; set; }
+	[Inject] private GlobalStateService? GlobalStateService { get; set; }
+	public ChartOptions chartOptions = new ChartOptions();
+	public List<ChartSeries> Series = new List<ChartSeries>();
+	public string[] XAxisLabels = { };
 
-  public List<ChartSeries> Series = new List<ChartSeries>();
-  public string[] XAxisLabels = { };
-  private async Task<int> GetTotalPendingTxesCountAsync()
-  {
-    if (_dbContext is null) return 0;
+	protected override async Task OnInitializedAsync()
+	{
+		if (GlobalStateService is not null)
+			GlobalStateService.PropertyChanged += GlobalStateServicePropertyChanged;
+		await base.OnInitializedAsync();
+	}
 
-    return await _dbContext.Transactions.Where(tx => tx.DateConfirmed == null).CountAsync();
-  }
+	private async void GlobalStateServicePropertyChanged(object? sender, PropertyChangedEventArgs e)
+	{
+		await UpdateValuesAsync();
+	}
 
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender)
+		{
+			if (GlobalStateService is not null)
+				await UpdateValuesAsync();
+		}
+		await base.OnAfterRenderAsync(firstRender);
+	}
 
-  protected override async Task OnInitializedAsync()
-  {
-    _ = InitializeDataRefresh();
-    await base.OnInitializedAsync();
-  }
+	private async Task UpdateValuesAsync()
+	{
+		var hourlyPendingTxes = await GetHourlyTxesAsync();
+		var hourlyAverageConfirmationTimes = GetHourlyAverageConfirmationTimes();
 
-  private async Task InitializeDataRefresh()
-  {
-    while (true)
-    {
-      if (_logger is not null)
-      {
-        _logger.LogInformation("Refreshing data...");
-        await UpdateValuesAsync();
-        await Task.Delay(TimeSpan.FromSeconds(20));
-      }
-    }
-  }
+		XAxisLabels = hourlyPendingTxes
+		  .Select(d => d.Item1.ToString("h tt"))
+		  .ToArray();
 
-  protected override async Task OnAfterRenderAsync(bool firstRender)
-  {
-    await base.OnAfterRenderAsync(firstRender);
-  }
+		Series.Clear();
 
-  private async Task UpdateValuesAsync()
-  {
-    TotalPendingTxesCount = await GetTotalPendingTxesCountAsync();
-    TotalConfirmedTxesCount = await GetTotalConfirmedTxesCountAsync();
-    AverageConfirmationTime = await GetAverageConfirmationTimeAsync();
-    var hourlyPendingTxes = await GetHourlyTxesAsync();
-    var hourlyAverageConfirmationTimes = await GetHourlyAverageConfirmationTimesAsync();
+		Series.Add(new()
+		{
+			Name = "Txes Submitted",
+			Data = hourlyPendingTxes.Select(d => (double)d.Item2).ToArray()
+		});
 
-    XAxisLabels = hourlyPendingTxes
-      .Select(d => d.Item1.ToString("h tt"))
-      .ToArray();
+		Series.Add(new()
+		{
+			Name = "Average Confirmation Time (minutes)",
+			Data = hourlyAverageConfirmationTimes.Select(d => d.Item2.TotalMinutes).ToArray()
+		});
 
-    Series.Clear();
+		chartOptions.YAxisTicks = 5;
+		chartOptions.ChartPalette = new string[] { "#594ae2ff", "#00c853ff" };
+		await InvokeAsync(StateHasChanged);
+	}
+	private async Task<List<(DateTime, int)>> GetHourlyTxesAsync()
+	{
+		var hourlyPendingTxes = new List<(DateTime, int)>();
 
-    Series.Add(new()
-    {
-      Name = "Txes Submitted",
-      Data = hourlyPendingTxes.Select(d => (double)d.Item2).ToArray()
-    });
+		if (_dbContext is null ||
+		  TimeZoneService is null || GlobalStateService is null) return hourlyPendingTxes;
 
-    Series.Add(new()
-    {
-      Name = "Average Confirmation Time (minutes)",
-      Data = hourlyAverageConfirmationTimes.Select(d => d.Item2.TotalMinutes).ToArray()
-    });
+		var currentDate = DateTime.UtcNow;
+		var txes = GlobalStateService.HourlyCreatedTxes;
 
-    chartOptions.YAxisTicks = 5;
-    chartOptions.ChartPalette = new string[] { "#594ae2ff", "#00c853ff"};
-    await InvokeAsync(StateHasChanged);
-  }
+		var binDate = currentDate.Subtract(TimeSpan.FromHours(12));
 
-  private async Task<int> GetTotalConfirmedTxesCountAsync()
-  {
-    if (_dbContext is null) return 0;
+		while (binDate <= currentDate)
+		{
+			var count = txes
+			  .Where(tx => tx.DateCreated < binDate && tx.DateCreated >= binDate.Subtract(TimeSpan.FromHours(1)))
+			  .Count();
 
-    return await _dbContext.Transactions
-      .Where(tx => tx.DateConfirmed != null && DateTime.UtcNow - tx.DateConfirmed < TimeSpan.FromHours(1))
-      .CountAsync();
-  }
+			var offset = await TimeZoneService.GetLocalDateTime(binDate);
+			hourlyPendingTxes.Add((offset.DateTime, count));
 
-  private async Task<TimeSpan> GetAverageConfirmationTimeAsync()
-  {
-    if (_dbContext is null) return TimeSpan.FromSeconds(0);
+			binDate += TimeSpan.FromHours(1);
+		}
 
-    var timeSpans = await _dbContext.Transactions
-        .Where(tx => tx.DateConfirmed != null && DateTime.UtcNow - tx.DateConfirmed < TimeSpan.FromHours(1))
-        .Select(tx => tx.DateConfirmed - tx.DateCreated ?? TimeSpan.FromSeconds(0))
-        .ToListAsync();
+		return hourlyPendingTxes;
+	}
 
-    if (timeSpans.Any())
-      return TimeSpan.FromSeconds(timeSpans.Select(s => s.TotalSeconds).Average());
-    else
-      return TimeSpan.FromSeconds(0);
-  }
+	private List<(DateTime, TimeSpan)> GetHourlyAverageConfirmationTimes()
+	{
+		var hourlyData = new List<(DateTime, TimeSpan)>();
 
-  private async Task<List<(DateTime, int)>> GetHourlyTxesAsync()
-  {
-    var hourlyPendingTxes = new List<(DateTime, int)>();
+		if (_dbContext is null || GlobalStateService is null) return hourlyData;
 
-    if (_dbContext is null ||
-      TimeZoneService is null) return hourlyPendingTxes;
+		var currentDate = DateTime.UtcNow;
+		var txes = GlobalStateService.HourlyConfirmedTxes;
+		var binDate = currentDate.Subtract(TimeSpan.FromHours(12));
 
-    var currentDate = DateTime.UtcNow;
-    var txes = await _dbContext.Transactions
-        .Where(tx => currentDate - tx.DateCreated < TimeSpan.FromHours(12))
-        .ToListAsync();
+		while (binDate <= currentDate)
+		{
+			var durations = txes
+				.Where(tx => tx.DateConfirmed < binDate && tx.DateConfirmed >= binDate.Subtract(TimeSpan.FromHours(1)))
+				.Select(tx => (tx.DateConfirmed - tx.DateCreated)?.TotalSeconds ?? 0)
+				.ToList();
 
-    var binDate = currentDate.Subtract(TimeSpan.FromHours(12));
+			if (durations.Any())
+			{
+				var average = TimeSpan.FromSeconds(durations.Average());
+				hourlyData.Add((binDate, average));
+			}
+			else
+				hourlyData.Add((binDate, TimeSpan.FromSeconds(0)));
 
-    while (binDate <= currentDate)
-    {
-      var count = txes
-        .Where(tx => tx.DateCreated < binDate && tx.DateCreated >= binDate.Subtract(TimeSpan.FromHours(1)))
-        .Count();
-      
+			binDate += TimeSpan.FromHours(1);
+		}
 
-      var offset = await TimeZoneService.GetLocalDateTime(binDate);
-      hourlyPendingTxes.Add((offset.DateTime, count));
+		return hourlyData;
+	}
+	private string FormatTimeSpan(TimeSpan ts)
+	{
+		return string.Format("{0:%h}H {0:%m}M {0:%s}S", ts);
+	}
 
-      binDate += TimeSpan.FromHours(1);
-    }
-
-    return hourlyPendingTxes;
-  }
-
-  private async Task<List<(DateTime, TimeSpan)>> GetHourlyAverageConfirmationTimesAsync()
-  {
-    var hourlyData = new List<(DateTime, TimeSpan)>();
-
-    if (_dbContext is null) return hourlyData;
-
-    var currentDate = DateTime.UtcNow;
-    var txes = await _dbContext.Transactions
-        .Where(tx => tx.DateConfirmed != null && currentDate - tx.DateConfirmed < TimeSpan.FromHours(12))
-        .ToListAsync();
-
-    var binDate = currentDate.Subtract(TimeSpan.FromHours(12));
-
-    while (binDate <= currentDate)
-    {
-      var durations = txes
-          .Where(tx => tx.DateConfirmed < binDate && tx.DateConfirmed >= binDate.Subtract(TimeSpan.FromHours(1)))
-          .Select(tx => (tx.DateConfirmed - tx.DateCreated)?.TotalSeconds ?? 0)
-          .ToList();
-
-      if (durations.Any())
-      {
-        var average = TimeSpan.FromSeconds(durations.Average());
-        hourlyData.Add((binDate, average));
-      }
-      else
-        hourlyData.Add((binDate, TimeSpan.FromSeconds(0)));
-
-      binDate += TimeSpan.FromHours(1);
-    }
-
-
-    return hourlyData;
-  }
-
-  private string FormatTimeSpan(TimeSpan ts)
-  {
-    return string.Format("{0:%h}H {0:%m}M {0:%s}S", ts);
-  }
+	public void Dispose()
+	{
+		if (GlobalStateService is not null)
+			GlobalStateService.PropertyChanged -= GlobalStateServicePropertyChanged;
+	}
 }
