@@ -7,18 +7,21 @@ namespace ADAPH.TxSubmit.Workers;
 public class TransactionWorker : BackgroundService
 {
 
-  private readonly ITransactionsService _txService;
+  private readonly ITransactionsService _bfTxService;
+  private readonly TransactionService _txService;
   private readonly ILogger<TransactionWorker> _logger;
   private readonly IConfiguration _configuration;
 
   public TransactionWorker(
     IConfiguration configuration,
-    ITransactionsService txService,
-    ILogger<TransactionWorker> logger)
+    ITransactionsService bfTxService,
+    ILogger<TransactionWorker> logger,
+    TransactionService txService)
   {
-    _txService = txService;
+    _bfTxService = bfTxService;
     _logger = logger;
     _configuration = configuration;
+    _txService = txService;
   }
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -27,34 +30,97 @@ public class TransactionWorker : BackgroundService
     {
       var optionsBuilder = new DbContextOptionsBuilder<TxSubmitDbContext>();
       optionsBuilder.UseNpgsql(_configuration.GetConnectionString("TxSubmitDb"));
-      var _dbContext = new TxSubmitDbContext(optionsBuilder.Options);
+      using var _dbContext = new TxSubmitDbContext(optionsBuilder.Options);
 
-      var unconfirmedTx = await _dbContext.Transactions
-       .Where(tx => tx.DateConfirmed == null)
-       .ToListAsync();
-
-      if (unconfirmedTx is not null)
-      {
-        _logger.Log(LogLevel.Information, $"Checking for unconfirmed transactions: {unconfirmedTx.Count}");
-        foreach (var tx in unconfirmedTx)
-        {
-          try
-          {
-            var getTxResponse = await _txService.GetAsync(tx.TxHash, stoppingToken);
-            if (getTxResponse is not null)
-            {
-              tx.DateConfirmed = DateTime.UtcNow;
-              await _dbContext.SaveChangesAsync();
-            }
-          }
-          catch
-          {
-            _logger.Log(LogLevel.Information, $"Tx not yet confirmed: [{tx.TxHash}]");
-          }
-        }
-      }
+      await CheckConfirmedTxAsync(_dbContext, stoppingToken);
+      await CheckUnconfirmedTxsAsync(_dbContext, stoppingToken);
 
       await Task.Delay(1000 * 60, stoppingToken);
+    }
+  }
+
+  private async Task CheckConfirmedTxAsync(TxSubmitDbContext dbContext, CancellationToken stoppingToken)
+  {
+    //Get confirmed Txs with less than 10 confirmations
+    var confirmedTxs = await dbContext.Transactions
+       .Where(tx => tx.DateConfirmed != null && 
+          DateTime.UtcNow - tx.DateConfirmed < TimeSpan.FromSeconds(20 * 10))
+       .ToListAsync();
+
+    if (confirmedTxs is null) return;
+
+    foreach(var tx in confirmedTxs)
+    {
+      //Check if tx is still confirmed
+      var isTxConfirmed = await IsTxConfirmedAsync(tx, stoppingToken);
+
+      if(!isTxConfirmed)
+      {
+        //Tx may have been affected by a fork
+        //Mark tx as unconfirmed to be resubmitted again
+        _logger.Log(LogLevel.Information, $"Transaction may have been affected by a fork: {tx.TxHash}");
+        tx.DateConfirmed = null;
+      }
+    }
+
+    await dbContext.SaveChangesAsync();
+  }
+
+  private async Task CheckUnconfirmedTxsAsync(TxSubmitDbContext dbContext, CancellationToken stoppingToken)
+  {
+    var averageConfirmationTime = TimeSpan.FromMinutes(5);
+
+    //Get Unconfirmed Txes that are less than 1 hour old
+    var unconfirmedTxs = await dbContext.Transactions
+       .Where(tx => tx.DateConfirmed == null && 
+          DateTime.UtcNow - tx.DateCreated < TimeSpan.FromHours(1))
+       .ToListAsync();
+
+    if (unconfirmedTxs is null) return;
+
+    _logger.Log(LogLevel.Information, $"Checking for unconfirmed transactions: {unconfirmedTxs.Count}");
+    foreach (var tx in unconfirmedTxs)
+    {
+      var isTxConfirmed = await IsTxConfirmedAsync(tx, stoppingToken);
+      if (isTxConfirmed)
+      {
+        //If tx is confirmed, updated db
+        tx.DateConfirmed = DateTime.UtcNow;
+      }
+      else
+      {
+        if(tx.TxBytes is null ||
+          DateTime.UtcNow - tx.DateCreated < averageConfirmationTime) continue;
+
+        //if Tx is not confirmed,
+        //Check if txBytes is stored in db and
+        //Unconfirmed tx age is greater than average confirmation time
+        //Then resubmit tx
+        _logger.Log(LogLevel.Information, $"Resubmitting Tx: {tx.TxHash}");
+        var txId = await _txService.SubmitAsync(tx.TxBytes);
+
+        //If tx is resubmitted succesfully, slide DateCreated Value
+        if(txId != null)
+        {
+          _logger.Log(LogLevel.Information, $"Transaction resubmitted: {tx.TxHash}");
+          tx.DateCreated = DateTime.UtcNow;
+        }
+      }
+    }
+    await dbContext.SaveChangesAsync();
+  }
+
+  private async Task<bool> IsTxConfirmedAsync(Transaction tx, CancellationToken stoppingToken)
+  {
+    try
+    {
+      var getTxResponse = await _bfTxService.GetAsync(tx.TxHash, stoppingToken);
+      return getTxResponse is not null;
+    }
+    catch
+    {
+      _logger.Log(LogLevel.Information, $"Tx not yet confirmed: [{tx.TxHash}]");
+      return false;
     }
   }
 }
