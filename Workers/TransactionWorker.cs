@@ -1,4 +1,5 @@
 using ADAPH.TxSubmit.Data;
+using ADAPH.TxSubmit.Services;
 using Blockfrost.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,18 +12,21 @@ public class TransactionWorker : BackgroundService
   private readonly TransactionService _txService;
   private readonly ILogger<TransactionWorker> _logger;
   private readonly IConfiguration _configuration;
+	private readonly GlobalStateService _globalStateService;
 
-  public TransactionWorker(
+	public TransactionWorker(
     IConfiguration configuration,
     ITransactionsService bfTxService,
     ILogger<TransactionWorker> logger,
-    TransactionService txService)
+    TransactionService txService,
+    GlobalStateService globalStateService)
   {
     _bfTxService = bfTxService;
     _logger = logger;
     _configuration = configuration;
     _txService = txService;
-  }
+		_globalStateService = globalStateService;
+	}
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -68,7 +72,7 @@ public class TransactionWorker : BackgroundService
 
   private async Task CheckUnconfirmedTxsAsync(TxSubmitDbContext dbContext, CancellationToken stoppingToken)
   {
-    var averageConfirmationTime = TimeSpan.FromMinutes(5);
+    var averageConfirmationTime = _globalStateService.AverageConfirmationTime;
 
     //Get Unconfirmed Txes that are less than 1 hour old
     var unconfirmedTxs = await dbContext.Transactions
