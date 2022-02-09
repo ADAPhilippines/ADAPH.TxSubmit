@@ -49,11 +49,6 @@ public partial class Index : IDisposable
 		var hourlyPendingTxs = await GetHourlyTxesAsync();
 		var hourlyAverageConfirmationTimes = GetHourlyAverageConfirmationTimes();
 
-		foreach(var hourlyPendingTx in hourlyPendingTxs)
-		{
-			Console.WriteLine(hourlyPendingTx.Item1);
-		}
-
 		XAxisLabels = hourlyPendingTxs
 		  .Select(d => d.Item1.ToString("h tt"))
 		  .ToArray();
@@ -84,12 +79,14 @@ public partial class Index : IDisposable
 		if (_dbContext is null ||
 		  TimeZoneService is null || GlobalStateService is null) return hourlyPendingTxes;
 
-		var currentDate = DateTime.UtcNow;
 		var txes = GlobalStateService.HourlyCreatedTxes;
 
-		var binDate = currentDate.Subtract(TimeSpan.FromHours(12));
+		var currentDate = DateTime.UtcNow + TimeSpan.FromHours(1);
+		var currentDateRounded = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, currentDate.Hour, 0 , 0, DateTimeKind.Utc);
+		currentDateRounded -= TimeSpan.FromSeconds(1);
+		var binDate = currentDateRounded.Subtract(TimeSpan.FromHours(12));
 
-		while (binDate <= currentDate)
+		while (binDate <= currentDateRounded)
 		{
 			var count = txes
 			  .Where(tx => tx.DateCreated < binDate && tx.DateCreated >= binDate.Subtract(TimeSpan.FromHours(1)))
@@ -110,11 +107,14 @@ public partial class Index : IDisposable
 
 		if (_dbContext is null || GlobalStateService is null) return hourlyData;
 
-		var currentDate = DateTime.UtcNow;
 		var txes = GlobalStateService.HourlyConfirmedTxes;
-		var binDate = currentDate.Subtract(TimeSpan.FromHours(12));
 
-		while (binDate <= currentDate)
+		var currentDate = DateTime.UtcNow + TimeSpan.FromHours(1);
+		var currentDateRounded = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, currentDate.Hour, 0 , 0, DateTimeKind.Utc);
+		currentDateRounded -= TimeSpan.FromSeconds(1);
+		var binDate = currentDateRounded.Subtract(TimeSpan.FromHours(12));
+
+		while (binDate <= currentDateRounded)
 		{
 			var durations = txes
 				.Where(tx => tx.DateConfirmed < binDate && tx.DateConfirmed >= binDate.Subtract(TimeSpan.FromHours(1)))
