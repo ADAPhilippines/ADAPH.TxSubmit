@@ -30,6 +30,10 @@ a, .btn-link {
     outline: 1px solid red;
 }
 
+.container {
+    overflow: hidden;
+}
+
 .validation-message {
     color: red;
 }
@@ -42,8 +46,43 @@ a, .btn-link {
     width: 100% !important;
 }
 
-.theme-switch {
-    margin-right: -8px !important;
+.full-width-tabs-toolbar .mud-tabs-toolbar-wrapper{
+    width: 100% !important;
+}
+
+.full-width-tabs-toolbar .mud-tabs-toolbar-wrapper > .mud-tooltip-root {
+    flex-grow: 1;
+}
+
+.default-button {
+    height: 42px;
+}
+
+.default-button .button-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 4px;
+}
+
+.tx-list {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.tx-expansion-line {
+    height: 100% !important;
+    top: 0 !important;
+    left: 0px !important;
+    width: 4px !important;
+    border-radius: 2px; 
+}
+
+.tx-expansion-panel:nth-child(odd) hr {
+    background: var(--mud-palette-tertiary);
+}
+
+.tx-expansion-panel:nth-child(even) hr {
+    background: var(--mud-palette-primary);
 }
 
 #blazor-error-ui {

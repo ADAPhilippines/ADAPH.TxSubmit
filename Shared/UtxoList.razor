@@ -1,0 +1,11 @@
+@namespace ADAPH.TxSubmit.Shared
+
+@if (Utxos is not null)
+{
+	<MudList>
+		@foreach(var utxo in Utxos)
+		{
+			<UtxoListItem Utxo="@utxo"/>
+		}
+	</MudList>
+}
