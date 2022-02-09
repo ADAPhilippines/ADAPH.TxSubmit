@@ -63,11 +63,11 @@ public class DbWorker : BackgroundService
 	{
 		if (dbContext is null) return 0;
 
-		var currentDateRounded = GetRoundedDateTime();
+		var currentDate = DateTime.UtcNow;
 
 		return await dbContext.Transactions
 			.Where(tx => tx.DateConfirmed == null && 
-				currentDateRounded - tx.DateCreated < TimeSpan.FromHours(1))
+				currentDate - tx.DateCreated < TimeSpan.FromHours(1))
 			.CountAsync();
 	}
 
@@ -75,10 +75,10 @@ public class DbWorker : BackgroundService
 	{
 		if (dbContext is null) return 0;
 
-		var currentDateRounded = GetRoundedDateTime();
+		var currentDate = DateTime.UtcNow;
 
 		return await dbContext.Transactions
-		  .Where(tx => tx.DateConfirmed != null && currentDateRounded - tx.DateConfirmed < TimeSpan.FromHours(1))
+		  .Where(tx => tx.DateConfirmed != null && currentDate - tx.DateConfirmed < TimeSpan.FromHours(1))
 		  .CountAsync();
 	}
 
@@ -86,10 +86,10 @@ public class DbWorker : BackgroundService
 	{
 		if (dbContext is null) return TimeSpan.FromSeconds(0);
 
-		var currentDateRounded = GetRoundedDateTime();
+		var currentDate = DateTime.UtcNow;
 
 		var timeSpans = await dbContext.Transactions
-			.Where(tx => tx.DateConfirmed != null && currentDateRounded - tx.DateConfirmed < TimeSpan.FromHours(1))
+			.Where(tx => tx.DateConfirmed != null && currentDate - tx.DateConfirmed < TimeSpan.FromHours(1))
 			.Select(tx => tx.DateConfirmed - tx.DateCreated ?? TimeSpan.FromSeconds(0))
 			.ToListAsync();
 
@@ -119,14 +119,5 @@ public class DbWorker : BackgroundService
 		return await dbContext.Transactions
 			.Where(tx => tx.DateConfirmed != null && currentDate - tx.DateConfirmed < TimeSpan.FromHours(13))
 			.ToListAsync();
-	}
-
-	private DateTime GetRoundedDateTime()
-	{
-		var currentDate = DateTime.UtcNow + TimeSpan.FromHours(1);
-		var currentDateRounded = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, currentDate.Hour, 0 , 0, DateTimeKind.Utc);
-		currentDateRounded -= TimeSpan.FromSeconds(1);
-
-		return currentDateRounded;
 	}
 }

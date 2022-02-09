@@ -81,12 +81,10 @@ public partial class Index : IDisposable
 
 		var txes = GlobalStateService.HourlyCreatedTxes;
 
-		var currentDate = DateTime.UtcNow + TimeSpan.FromHours(1);
-		var currentDateRounded = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, currentDate.Hour, 0 , 0, DateTimeKind.Utc);
-		currentDateRounded -= TimeSpan.FromSeconds(1);
-		var binDate = currentDateRounded.Subtract(TimeSpan.FromHours(12));
+		var currentDate = DateTime.UtcNow;
+		var binDate = currentDate.Subtract(TimeSpan.FromHours(12));
 
-		while (binDate <= currentDateRounded)
+		while (binDate <= currentDate)
 		{
 			var count = txes
 			  .Where(tx => tx.DateCreated < binDate && tx.DateCreated >= binDate.Subtract(TimeSpan.FromHours(1)))
@@ -109,12 +107,10 @@ public partial class Index : IDisposable
 
 		var txes = GlobalStateService.HourlyConfirmedTxes;
 
-		var currentDate = DateTime.UtcNow + TimeSpan.FromHours(1);
-		var currentDateRounded = new DateTime(currentDate.Year, currentDate.Month, currentDate.Day, currentDate.Hour, 0 , 0, DateTimeKind.Utc);
-		currentDateRounded -= TimeSpan.FromSeconds(1);
-		var binDate = currentDateRounded.Subtract(TimeSpan.FromHours(12));
+		var currentDate = DateTime.UtcNow;
+		var binDate = currentDate.Subtract(TimeSpan.FromHours(12));
 
-		while (binDate <= currentDateRounded)
+		while (binDate <= currentDate)
 		{
 			var durations = txes
 				.Where(tx => tx.DateConfirmed < binDate && tx.DateConfirmed >= binDate.Subtract(TimeSpan.FromHours(1)))
