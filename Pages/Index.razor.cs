@@ -46,10 +46,15 @@ public partial class Index : IDisposable
 	{
 		if(!IsJsInteropReady) return;
 		
-		var hourlyPendingTxes = await GetHourlyTxesAsync();
+		var hourlyPendingTxs = await GetHourlyTxesAsync();
 		var hourlyAverageConfirmationTimes = GetHourlyAverageConfirmationTimes();
 
-		XAxisLabels = hourlyPendingTxes
+		foreach(var hourlyPendingTx in hourlyPendingTxs)
+		{
+			Console.WriteLine(hourlyPendingTx.Item1);
+		}
+
+		XAxisLabels = hourlyPendingTxs
 		  .Select(d => d.Item1.ToString("h tt"))
 		  .ToArray();
 
@@ -57,8 +62,8 @@ public partial class Index : IDisposable
 
 		Series.Add(new()
 		{
-			Name = "Txs Submitted",
-			Data = hourlyPendingTxes.Select(d => (double)d.Item2).ToArray()
+			Name = "Txes Submitted",
+			Data = hourlyPendingTxs.Select(d => (double)d.Item2).ToArray()
 		});
 
 		Series.Add(new()
