@@ -48,12 +48,12 @@ public partial class Index : IDisposable
 
 	private async Task UpdateValuesAsync()
 	{
-		if (!IsJsInteropReady) return;
-
-		var hourlyPendingTxes = await GetHourlyTxesAsync();
+		if(!IsJsInteropReady) return;
+		
+		var hourlyPendingTxs = await GetHourlyTxesAsync();
 		var hourlyAverageConfirmationTimes = GetHourlyAverageConfirmationTimes();
 
-		XAxisLabels = hourlyPendingTxes
+		XAxisLabels = hourlyPendingTxs
 		  .Select(d => d.Item1.ToString("h tt"))
 		  .ToArray();
 
@@ -61,8 +61,8 @@ public partial class Index : IDisposable
 
 		Series.Add(new()
 		{
-			Name = "Txs Submitted",
-			Data = hourlyPendingTxes.Select(d => (double)d.Item2).ToArray()
+			Name = "Txes Submitted",
+			Data = hourlyPendingTxs.Select(d => (double)d.Item2).ToArray()
 		});
 
 		Series.Add(new()
@@ -83,9 +83,9 @@ public partial class Index : IDisposable
 		if (_dbContext is null ||
 		  TimeZoneService is null || GlobalStateService is null) return hourlyPendingTxes;
 
-		var currentDate = DateTime.UtcNow;
 		var txes = GlobalStateService.HourlyCreatedTxes;
 
+		var currentDate = DateTime.UtcNow;
 		var binDate = currentDate.Subtract(TimeSpan.FromHours(12));
 
 		while (binDate <= currentDate)
@@ -109,8 +109,9 @@ public partial class Index : IDisposable
 
 		if (_dbContext is null || GlobalStateService is null) return hourlyData;
 
-		var currentDate = DateTime.UtcNow;
 		var txes = GlobalStateService.HourlyConfirmedTxes;
+
+		var currentDate = DateTime.UtcNow;
 		var binDate = currentDate.Subtract(TimeSpan.FromHours(12));
 
 		while (binDate <= currentDate)
