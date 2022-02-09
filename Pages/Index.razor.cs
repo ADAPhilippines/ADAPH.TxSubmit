@@ -133,6 +133,7 @@ public partial class Index : IDisposable
 
 		return hourlyData;
 	}
+	
 	private string FormatTimeSpan(TimeSpan ts)
 	{
 		return string.Format("{0:%h}H {0:%m}M {0:%s}S", ts);
@@ -153,47 +154,57 @@ public partial class Index : IDisposable
 
 	private void InitializeTestTxs()
 	{
-		var testInputs = new Utxo[] {
-				new Utxo {
-					Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-					Amount = "1,128.623873",
-				},
-			};
+		var testInputs = new Utxo[]
+		{
+			new Utxo
+			{
+				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
+				Amount = "1,128.623873",
+			},
+		};
 
-		var testOutputs = new Utxo[] {
-				new Utxo {
-					Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-					Amount = "167.967772",
-					Assets = new Asset[]{
-						new Asset {
-							Quantity = "1",
-							Name = "Token 1"
-						},
-						new Asset {
-							Quantity = "1",
-							Name = "Token 2"
-						},
-					}
-				},
-			};
+		var testOutputs = new Utxo[]
+		{
+			new Utxo
+			{
+				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
+				Amount = "167.967772",
+				Assets = new Asset[]
+				{
+					new Asset {
+						Quantity = "1",
+						Name = "Token 1"
+					},
+					new Asset {
+						Quantity = "1",
+						Name = "Token 2"
+					},
+				}
+			},
+		};
 
-		var testInputs2 = new Utxo[] {
-				new Utxo {
-					Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-					Amount = "1,128.623873"
-				},
-			};
+		var testInputs2 = new Utxo[]
+		{
+			new Utxo
+			{
+				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
+				Amount = "1,128.623873"
+			},
+		};
 
-		var testOutputs2 = new Utxo[] {
-				new Utxo {
-					Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-					Amount = "167.967772"
-				},
-				new Utxo {
-					Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-					Amount = "167.967772"
-				},
-			};
+		var testOutputs2 = new Utxo[]
+		{
+			new Utxo
+			{
+				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
+				Amount = "167.967772"
+			},
+			new Utxo
+			{
+				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
+				Amount = "167.967772"
+			},
+		};
 
 		var submittedTx1 = new SubmittedTx
 		{
