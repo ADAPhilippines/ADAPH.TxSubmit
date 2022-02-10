@@ -4,11 +4,11 @@ using MudBlazor;
 
 namespace ADAPH.TxSubmit.Shared;
 
-public partial class UtxoListItem
+public partial class TxInputList
 {
-	[Parameter] public Utxo? Utxo { get; set; }
+	[Parameter] public TxInput[]? Inputs { get; set; }
 	private Align TokenTextAlign { get; set; } = Align.Right;
-
+	
 	private void OnBreakPointChanged(Breakpoint breakpoint)
 	{
 		if (breakpoint >= Breakpoint.Md)

@@ -13,11 +13,12 @@ public partial class Index : IDisposable
 	[Inject] private ILogger<Index>? _logger { get; set; }
 	[Inject] private TimeZoneService? TimeZoneService { get; set; }
 	[Inject] private GlobalStateService? GlobalStateService { get; set; }
+	[Inject] private HttpClient? Http { get; set; }
 	public ChartOptions chartOptions = new ChartOptions();
 	public List<ChartSeries> Series = new List<ChartSeries>();
 	public string[] XAxisLabels = { };
 	public bool IsJsInteropReady = false;
-	private List<SubmittedTx> SubmittedTxs { get; set; } = new();
+	private List<SubmittedTransaction> SubmittedTxs { get; set; } = new();
 	private string ChartHeight { get; set; } = "450px";
 	private string TabBarClass { get; set; } = "full-width-tabs-toolbar";
 
@@ -38,18 +39,18 @@ public partial class Index : IDisposable
 		if (firstRender)
 		{
 			IsJsInteropReady = true;
+			await InitializeTestTxsAsync();
 			if (GlobalStateService is not null)
 				await UpdateValuesAsync();
 
-			InitializeTestTxs();
 		}
 		await base.OnAfterRenderAsync(firstRender);
 	}
 
 	private async Task UpdateValuesAsync()
 	{
-		if(!IsJsInteropReady) return;
-		
+		if (!IsJsInteropReady) return;
+
 		var hourlyPendingTxs = await GetHourlyTxesAsync();
 		var hourlyAverageConfirmationTimes = GetHourlyAverageConfirmationTimes();
 
@@ -134,7 +135,7 @@ public partial class Index : IDisposable
 
 		return hourlyData;
 	}
-	
+
 	private string FormatTimeSpan(TimeSpan ts)
 	{
 		return string.Format("{0:%h}H {0:%m}M {0:%s}S", ts);
@@ -153,84 +154,29 @@ public partial class Index : IDisposable
 			TabBarClass = "";
 	}
 
-	private void InitializeTestTxs()
+	private async Task InitializeTestTxsAsync()
 	{
-		var testInputs = new Utxo[]
+		try 
 		{
-			new Utxo
-			{
-				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-				Amount = "1,128.623873",
-			},
-		};
-
-		var testOutputs = new Utxo[]
+			if (Http is not null)
+			{	
+				var txCbor64 = "hKYAgoJYIKwdWm8vPjLj+NlBqUUEgICKXcWk6zYRIMSjO5vL2crGAYJYID6LP0xHsM28IXua9cQ1UkK8NAupVd8aqDdZnNo76mzgAQGCglg5AbRL9LNobdmbC+0OUYaBOOfwgZUvQEn50k6vd8MnPDKRu7BV7EfIcm+G0BVja+aziR2qok3I82YUghoAHoSAoVgc+OHymaZ0Um6BsnxXyNHSzhSgS3FXH14DrOgYsqFLSURLYXRhbmFib2kBglg5AbRL9LNobdmbC+0OUYaBOOfwgZUvQEn50k6vd8MnPDKRu7BV7EfIcm+G0BVja+aziR2qok3I82YUGgBARh0CGgAHoSAHWCB7i/9EZJZje/oJdqSd3dSg53Q2yKZec1XU0qIvkaREYQmhWBz44fKZpnRSboGyfFfI0dLOFKBLcVcfXgOs6BiyoUtJREthdGFuYWJvaQEOgVgctEv0s2ht2ZsL7Q5RhoE45/CBlS9ASfnSTq93w6EBgYIAWBy0S/SzaG3ZmwvtDlGGgTjn8IGVL0BJ+dJOr3fD9aEZHMiheDhmOGUxZjI5OWE2NzQ1MjZlODFiMjdjNTdjOGQxZDJjZTE0YTA0YjcxNTcxZjVlMDNhY2U4MThiMqFrSURLYXRhbmFib2mhZmF2YXRhcqJocHJvdG9jb2xkaXBmc2NzcmN4LlFtTmhoaEpUWVBmU3Z3eXNhSDk4YnQ1NWdrNWk1YmhGRVVBQW1ackZFUXFYdjE=";
+				
+				var rawTx = await Http.GetFromJsonAsync<RawTransaction>($"https://tx.adaph.io/?txCbor64={txCbor64}");
+				if(rawTx is null) return;
+				SubmittedTxs.Add(
+					new SubmittedTransaction
+					{
+						DateCreated = DateTime.UtcNow,
+						RawTransaction = rawTx
+					}
+				);
+			}
+		}
+		catch(Exception ex)
 		{
-			new Utxo
-			{
-				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-				Amount = "167.967772",
-				Assets = new Asset[]
-				{
-					new Asset {
-						Quantity = "1",
-						Name = "Token 1"
-					},
-					new Asset {
-						Quantity = "1",
-						Name = "Token 2"
-					},
-				}
-			},
-		};
-
-		var testInputs2 = new Utxo[]
-		{
-			new Utxo
-			{
-				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-				Amount = "1,128.623873"
-			},
-		};
-
-		var testOutputs2 = new Utxo[]
-		{
-			new Utxo
-			{
-				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-				Amount = "167.967772"
-			},
-			new Utxo
-			{
-				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-				Amount = "167.967772"
-			},
-		};
-
-		var submittedTx1 = new SubmittedTx
-		{
-			DateCreated = DateTime.UtcNow,
-			TxId = "7a509627decef8b7f81a0ca459e379cb727f23b5e5ef41272f8f676f472dbefc",
-			Amount = "129.93",
-			Fee = "0.656101",
-			Status = "Sent",
-			Inputs = testInputs,
-			Outputs = testOutputs
-		};
-
-		var submittedTx2 = new SubmittedTx
-		{
-			DateCreated = DateTime.UtcNow,
-			TxId = "7a509627decef8b7f81a0ca459e379cb727f23b5e5ef41272f8f676f472dbefc",
-			Amount = "129.93",
-			Fee = "0.656101",
-			Status = "Sent",
-			Inputs = testInputs2,
-			Outputs = testOutputs2
-		};
-
-		SubmittedTxs.Add(submittedTx1);
-		SubmittedTxs.Add(submittedTx2);
+			Console.WriteLine(ex.Message);
+		}
 	}
 
 	public void Dispose()
