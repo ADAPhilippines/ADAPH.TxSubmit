@@ -8,6 +8,7 @@ using ADAPH.TxSubmit.Workers;
 using MudBlazor.Services;
 using Blazored.LocalStorage;
 using ADAPH.TxSubmit.Services;
+using Blockfrost.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,11 @@ builder.Services.AddCors(option =>
         .AllowAnyMethod()
         .SetIsOriginAllowedToAllowWildcardSubdomains();
     });
+});
+
+builder.Services.AddHttpClient("tx-inspector", c =>
+{
+    c.BaseAddress = new Uri($"https://tx.adaph.io/");
 });
 
 var app = builder.Build();
