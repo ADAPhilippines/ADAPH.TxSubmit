@@ -1,6 +1,7 @@
-using System.Net.Http.Headers;
 using System.Text.Json;
+using System.Web;
 using ADAPH.TxSubmit.Data;
+using Blockfrost.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ADAPH.TxSubmit.Controllers;
@@ -14,44 +15,79 @@ public class TransactionController : ControllerBase
   private readonly IConfiguration _configuration;
   private readonly TxSubmitDbContext _dbContext;
   private readonly TransactionService _transactionService;
+  private readonly IAccountsService _bfAccountsService;
+  private readonly ILogger<TransactionController> _logger;
 
   public TransactionController(
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
     TxSubmitDbContext dbContext,
-    TransactionService transactionService)
+    TransactionService transactionService,
+    IAccountsService bfAccountsService,
+    ILogger<TransactionController> logger)
   {
     _httpClientFactory = httpClientFactory;
     _configuration = configuration;
     _dbContext = dbContext;
     _transactionService = transactionService;
+    _bfAccountsService = bfAccountsService;
+    _logger = logger;
   }
 
   [HttpPost]
   public async Task<IActionResult> SubmiTx()
   {
-    using var client = _httpClientFactory.CreateClient();
-    using var ms = new MemoryStream();
-    await Request.Body.CopyToAsync(ms);
-    var txBytes = ms.ToArray();
-    var txId = await _transactionService.SubmitAsync(txBytes);
-  
-    if (txId != null)
+    try
     {
-      var tx = new Transaction
+      using var ms = new MemoryStream();
+      await Request.Body.CopyToAsync(ms);
+      var txBytes = ms.ToArray();
+      var txId = await _transactionService.SubmitAsync(txBytes);
+    
+      if (txId != null)
       {
-        TxHash = txId,
-        TxBytes = txBytes,
-        TxSize = txBytes.Length
-      };
-      _dbContext.Transactions.Add(tx);
-      await _dbContext.SaveChangesAsync();
+        var tx = new Transaction
+        {
+          TxHash = txId,
+          TxBytes = txBytes,
+          TxSize = txBytes.Length
+        };
+        _dbContext.Transactions.Add(tx);
 
-      HttpContext.Response.StatusCode = 202;
-      return new JsonResult(txId);
+        using var client = _httpClientFactory.CreateClient("tx-inspector");
+        var base64String = Convert.ToBase64String(txBytes);
+        var result = await client.GetFromJsonAsync<JsonElement>($"?txCbor64={HttpUtility.UrlEncode(base64String)}");
+
+        if (result.TryGetProperty("inputs", out var inputs))
+        {
+          var stakeAddresses = inputs.EnumerateArray()
+            .Select<JsonElement, string?>(el => ((el.GetProperty("stakeAddress").GetString()?.Length ?? 0) != 0) ? 
+                el.GetProperty("stakeAddress").GetString() : el.GetProperty("address").GetString())
+            .First(s => s is not null);
+
+          if(stakeAddresses is not null)
+          {
+            _dbContext.TransactionOwners.Add(new () 
+            {
+              OwnerAddress = stakeAddresses,
+              Transaction = tx
+            });
+          }
+        }
+
+        await _dbContext.SaveChangesAsync();
+
+        HttpContext.Response.StatusCode = 202;
+        return new JsonResult(txId);
+      }
+      else
+      {
+        return BadRequest();
+      }
     }
-    else
+    catch(Exception ex)
     {
+      _logger.LogError(ex.Message);
       return BadRequest();
     }
   }
