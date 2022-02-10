@@ -57,7 +57,7 @@ public class TransactionController : ControllerBase
       {
         var stakeAddresses = inputs.EnumerateArray()
           .Select<JsonElement, string?>(el => el.GetProperty("stakeAddress").GetString())
-          .Where(s => s is not null)
+          .Where(s => s is not null && s.Length > 0)
           .Distinct();
 
         foreach(var stakeAddress in stakeAddresses)
