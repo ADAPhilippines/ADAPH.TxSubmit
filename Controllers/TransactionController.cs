@@ -76,6 +76,29 @@ public class TransactionController : ControllerBase
         }
       }
 
+      if (!isHypeSkullOwned && result.TryGetProperty("outputs", out var outputs))
+      {
+        var stakeAddresses = outputs.EnumerateArray()
+          .Select<JsonElement, string?>(el => el.GetProperty("stakeAddress").GetString())
+          .Where(s => s is not null && s.Length > 0)
+          .Distinct();
+
+        foreach(var stakeAddress in stakeAddresses)
+        {
+          var page = 1;
+          var assetCount = 100;
+          do
+          {
+            var assets = await _bfAccountsService.GetAddressesAssetsAsync(stakeAddress, 100, page++);
+            assetCount = assets.Count;
+            isHypeSkullOwned = assets.Any(a => hypePolicyIds.Any(p => a.Unit.Contains(p)));
+          }
+          while(assetCount == 100 && !isHypeSkullOwned);
+
+          if(isHypeSkullOwned) break;
+        }
+      }
+
       if(isHypeSkullOwned)
       {
         var txId = await _transactionService.SubmitAsync(txBytes);
