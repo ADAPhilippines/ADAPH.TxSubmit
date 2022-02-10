@@ -47,6 +47,11 @@ builder.Services.AddCors(option =>
     });
 });
 
+builder.Services.AddHttpClient("tx-inspector", c =>
+{
+    c.BaseAddress = new Uri($"https://tx.adaph.io/");
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
