@@ -2,93 +2,93 @@
 @page "/"
 
 <PageTitle>ADAPH | Cardano Tx Submit Service</PageTitle>
-<MudBreakpointProvider OnBreakpointChanged="OnBreakPointChanged">
+<MudBreakpointProvider OnBreakpointChanged="@OnBreakPointChanged">
   <MudContainer Class="mt-8 container">
     <MudTabs Rounded="true" ApplyEffectsToContainer="true" Elevation="3" PanelClass="pa-4" Centered="true" Class="@TabBarClass">
       <MudTabPanel Text="Dashboard">
-        <MudGrid Spacing="2" Justify="Justify.Center">
+        <MudGrid Spacing="2" Justify="@Justify.Center">
           <MudItem xs="12" md="4">
             <MudPaper Class="d-flex align-center flex-column justify-center mud-width-full pa-4" Elevation="3">
-              <MudAvatar Color="Color.Primary" Variant="Variant.Outlined">
-                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Primary" Size="Size.Large" />
+              <MudAvatar Color="@Color.Primary" Variant="@Variant.Outlined">
+                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="@Color.Primary" Size="@Size.Large" />
               </MudAvatar>
-              <MudText Typo="Typo.h6" Align="Align.Center">Pending Txs</MudText>
-              <MudDivider DividerType="DividerType.Middle" Class="my-1" />
+              <MudText Typo="@Typo.h6" Align="@Align.Center">Pending Txs</MudText>
+              <MudDivider DividerType="@DividerType.Middle" Class="my-1" />
               @if (GlobalStateService is not null)
               {
-                <MudText Typo="Typo.h3" Align="Align.Center">
+                <MudText Typo="@Typo.h3" Align="@Align.Center">
                   @GlobalStateService.TotalPendingTxesCount
                 </MudText>
               }
-              <MudText Typo="Typo.subtitle1" Align="Align.Center">Overall</MudText>
+              <MudText Typo="@Typo.subtitle1" Align="@Align.Center">Overall</MudText>
             </MudPaper>
           </MudItem>
           <MudItem xs="12" md="4">
             <MudPaper Class="d-flex flex-column align-center justify-center mud-width-full pa-4" Elevation="3">
-              <MudAvatar Color="Color.Primary" Variant="Variant.Outlined">
-                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Primary" Size="Size.Large" />
+              <MudAvatar Color="@Color.Primary" Variant="@Variant.Outlined">
+                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="@Color.Primary" Size="@Size.Large" />
               </MudAvatar>
-              <MudText Typo="Typo.h6" Align="Align.Center">Confirmed Txs</MudText>
-              <MudDivider DividerType="DividerType.Middle" Class="my-1" />
+              <MudText Typo="@Typo.h6" Align="@Align.Center">Confirmed Txs</MudText>
+              <MudDivider DividerType="@DividerType.Middle" Class="my-1" />
               @if (GlobalStateService is not null)
               {
-                <MudText Typo="Typo.h3" Align="Align.Center">
+                <MudText Typo="@Typo.h3" Align="@Align.Center">
                   @GlobalStateService.TotalConfirmedTxesCount
                 </MudText>
               }
-              <MudText Typo="Typo.subtitle1" Align="Align.Center">1 Hour</MudText>
+              <MudText Typo="@Typo.subtitle1" Align="@Align.Center">1 Hour</MudText>
             </MudPaper>
           </MudItem>
           <MudItem xs="12" md="4">
             <MudPaper Class="d-flex flex-column align-center justify-center mud-width-full pa-4" Elevation="3">
-              <MudAvatar Color="Color.Primary" Variant="Variant.Outlined">
-                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Primary" Size="Size.Large" />
+              <MudAvatar Color="@Color.Primary" Variant="@Variant.Outlined">
+                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="@Color.Primary" Size="@Size.Large" />
               </MudAvatar>
-              <MudText Typo="Typo.h6" Align="Align.Center">Average Confirmation Time (est.)</MudText>
-              <MudDivider DividerType="DividerType.Middle" Class="my-1" />
+              <MudText Typo="@Typo.h6" Align="@Align.Center">Average Confirmation Time (est.)</MudText>
+              <MudDivider DividerType="@DividerType.Middle" Class="my-1" />
               @if (GlobalStateService is not null)
               {
-                <MudText Typo="Typo.h3" Align="Align.Center">
+                <MudText Typo="@Typo.h3" Align="@Align.Center">
                   @FormatTimeSpan(GlobalStateService.AverageConfirmationTime)
                 </MudText>
               }
-              <MudText Typo="Typo.subtitle1" Align="Align.Center">1 Hour</MudText>
+              <MudText Typo="@Typo.subtitle1" Align="@Align.Center">1 Hour</MudText>
             </MudPaper>
           </MudItem>
         </MudGrid>
         <MudPaper Class="d-flex align-center flex-column justify-center mt-4 pa-4" Elevation="3">
-          <MudChart ChartType="ChartType.Line" ChartSeries="@Series" SelectedIndex="0" XAxisLabels="@XAxisLabels"
-            Width="100%" Height="@ChartHeight" ChartOptions="chartOptions"></MudChart>
+          <MudChart ChartType="@ChartType.Line" ChartSeries="@Series" SelectedIndex="0" XAxisLabels="@XAxisLabels"
+            Width="100%" Height="@ChartHeight" ChartOptions="@ChartOptions"></MudChart>
         </MudPaper>
       </MudTabPanel>
       <MudTabPanel Text="My Submitted Transactions">
-        <MudHidden Breakpoint="Breakpoint.MdAndUp" Invert="true">
-          <MudGrid Spacing="4" Justify="Justify.SpaceBetween" Class="align-center">
+        <MudHidden Breakpoint="@Breakpoint.MdAndUp" Invert="true">
+          <MudGrid Spacing="4" Justify="@Justify.SpaceBetween" Class="align-center">
             <MudItem Class="d-inline-flex align-center" md="8">
-              <MudTextField Label="Enter wallet address" T="string" Variant="Variant.Outlined" />
-              <MudButton Variant="Variant.Filled" Color="Color.Primary"
+              <MudTextField Label="Enter wallet address" T="string" Variant="@Variant.Outlined" />
+              <MudButton Variant="@Variant.Filled" Color="@Color.Primary"
                 Class="ml-3 default-button rounded-md px-3 py-2">
                 Retrieve Transactions
               </MudButton>
             </MudItem>
             <MudItem>
-              <MudText Typo="Typo.h5" Align="Align.Center">or</MudText>
+              <MudText Typo="@Typo.h5" Align="@Align.Center">or</MudText>
             </MudItem>
             <MudItem>
-              <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="default-button rounded-md px-3 py-2">
+              <MudButton Variant="@Variant.Filled" Color="@Color.Primary" Class="default-button rounded-md px-3 py-2">
                 <img alt="CARDANO_LOGO" src="images/CARDANO_LOGO.svg" class="button-icon">
                 <span>Connect With Cardano</span>
               </MudButton>
             </MudItem>
           </MudGrid>
         </MudHidden>
-        <MudHidden Breakpoint="Breakpoint.MdAndUp" Invert="false">
-          <MudGrid Spacing="2" Justify="Justify.Center" Class="align-center">
+        <MudHidden Breakpoint="@Breakpoint.MdAndUp" Invert="false">
+          <MudGrid Spacing="2" Justify="@Justify.Center" Class="align-center">
             <MudItem xs="12" Class="d-flex align-center justify-center">
-              <MudTextField Label="Enter wallet address" T="string" Variant="Variant.Outlined" />
+              <MudTextField Label="Enter wallet address" T="string" Variant="@Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" Class="d-flex align-center justify-center">
-              <MudButton Variant="Variant.Filled" Color="Color.Primary"
+              <MudButton Variant="@Variant.Filled" Color="@Color.Primary"
                 Class="mud-width-full default-button rounded-md px-3 py-2">
                 Retrieve Transactions
               </MudButton>
@@ -98,14 +98,14 @@
         <MudExpansionPanels Class="mt-4 tx-list" MultiExpansion="true">
           @foreach (var submittedTx in SubmittedTxs)
           {
-            <TxExpansionPanel SubmittedTx="@submittedTx" />
+            <TxExpansionPanel SubmittedTransaction="@submittedTx" />
           }
         </MudExpansionPanels>
       </MudTabPanel>
       <MudTabPanel Text="Reports" Disabled="true"></MudTabPanel>
     </MudTabs>
     <MudPaper Class="d-flex align-center flex-column justify-center mt-4 pa-4 mb-4 overflow-hidden" Elevation="3">
-      <MudText Typo="Typo.h6" Align="Align.Center" Class="word-break">Set your wallet submission node to:
+      <MudText Typo="@Typo.h6" Align="@Align.Center" Class="word-break">Set your wallet submission node to:
         <i>https://submit.adaph.io/api/v1.0/tx/submit</i>
       </MudText>
     </MudPaper>

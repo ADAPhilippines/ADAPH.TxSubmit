@@ -8,7 +8,7 @@ public partial class TxInputList
 {
 	[Parameter] public TxInput[]? Inputs { get; set; }
 	private Align TokenTextAlign { get; set; } = Align.Right;
-	
+
 	private void OnBreakPointChanged(Breakpoint breakpoint)
 	{
 		if (breakpoint >= Breakpoint.Md)

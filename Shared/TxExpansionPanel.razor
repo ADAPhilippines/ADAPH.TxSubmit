@@ -1,42 +1,42 @@
 @namespace ADAPH.TxSubmit.Shared
 
-<MudBreakpointProvider OnBreakpointChanged="OnBreakPointChanged">
+<MudBreakpointProvider OnBreakpointChanged="@OnBreakPointChanged">
 	@if(SubmittedTransaction is not null && SubmittedTransaction.RawTransaction is not null)
 	{
-		<MudExpansionPanel HideIcon="true" @bind-IsExpanded="IsOpen" Class="tx-expansion-panel">
+		<MudExpansionPanel HideIcon="true" @bind-IsExpanded="@IsOpen" Class="tx-expansion-panel">
 			<TitleContent>
 				<MudPaper Class="mud-ripple" Square="true" Elevation="0">
-					<MudGrid Justify="Justify.SpaceBetween">
+					<MudGrid Justify="@Justify.SpaceBetween">
 						<MudItem Class="d-flex flex-column" xs="12" md="6">
 							<div class="d-inline-flex align-center">
-								<MudText Typo="Typo.body1"><b>Transaction Id</b></MudText>
-								<MudChip Color="Color.Success" Class="ml-2">@SubmittedTransaction.Status</MudChip>
+								<MudText Typo="@Typo.body1"><b>Transaction Id</b></MudText>
+								<MudChip Color="@Color.Success" Class="ml-2">@SubmittedTransaction.Status</MudChip>
 							</div>
 							<div>
-								<MudText Typo="Typo.body1" Class="word-break">@SubmittedTransaction.RawTransaction.Hash</MudText>
+								<MudText Typo="@Typo.body1" Class="word-break">@SubmittedTransaction.RawTransaction.Hash</MudText>
 							</div>
 						</MudItem>
 						<MudItem xs="12" md="6">
-							<MudText Align="@AmountTextAlign" Typo="Typo.body1" Color="@AmountColor" Class="word-break"><b>@(GetOutputAmount()) ₳</b></MudText>
-							<MudText Align="@AmountTextAlign" Typo="Typo.body1" Class="word-break">@(GetTotalOutputTokens())</MudText>
-							<MudText Align="@AmountTextAlign" Color="Color.Secondary" Typo="Typo.body1" Class="word-break"><b>Fee: @(SubmittedTransaction.RawTransaction.Fee) ₳</b></MudText>
+							<MudText Align="@AmountTextAlign" Typo="@Typo.body1" Color="@AmountColor" Class="word-break"><b>@(GetOutputAmount())</b></MudText>
+							<MudText Align="@AmountTextAlign" Typo="@Typo.body1" Class="word-break">@(GetTotalOutputTokens())</MudText>
+							<MudText Align="@AmountTextAlign" Color="@Color.Secondary" Typo="@Typo.body1" Class="word-break"><b>Fee: @(Utils.LovelaceToAda(SubmittedTransaction.RawTransaction.Fee)) ₳</b></MudText>
 						</MudItem>
 					</MudGrid>
 					<div class="d-inline-flex align-center mt-4">
 						<MudIcon Icon="@(IsOpen ? Icons.Filled.KeyboardArrowUp : Icons.Filled.KeyboardArrowDown)"/>
-						<MudText Class="ml-2 word-break" Typo="Typo.body1">@(String.Format("{0:F}", SubmittedTransaction.DateCreated))</MudText>
+						<MudText Class="ml-2 word-break" Typo="@Typo.body1">@(String.Format("{0:F}", SubmittedTransaction.DateCreated))</MudText>
 					</div>
 				</MudPaper>
 			</TitleContent>
 			<ChildContent>
 				<MudDivider Vertical="true" Absolute="true" Class="tx-expansion-line"/>
-				<MudGrid Spacing="0" Justify="Justify.SpaceBetween">
+				<MudGrid Spacing="0" Justify="@Justify.SpaceBetween">
 					<MudItem xs="12" md="6">
 						<MudPaper Elevation="0">
 							@if(SubmittedTransaction.RawTransaction.Inputs is not null)
 							{
 								<div class="d-flex flex-column mt-2">
-									<MudText Typo="Typo.body1" Class="word-break"><b>@(SubmittedTransaction.RawTransaction.Inputs.Count()) UTxO Input(s)</b></MudText>
+									<MudText Typo="@Typo.body1" Class="word-break"><b>@(SubmittedTransaction.RawTransaction.Inputs.Count()) UTxO Input(s)</b></MudText>
 									<TxInputList Inputs="@SubmittedTransaction.RawTransaction.Inputs"/>
 								</div>
 							}
@@ -46,7 +46,7 @@
 						@if(SubmittedTransaction.RawTransaction.Outputs is not null)
 						{
 							<div class="d-flex flex-column mt-2">
-								<MudText Typo="Typo.body1" Class="word-break"><b>@(SubmittedTransaction.RawTransaction.Outputs.Count()) UTxO Output(s)</b></MudText>
+								<MudText Typo="@Typo.body1" Class="word-break"><b>@(SubmittedTransaction.RawTransaction.Outputs.Count()) UTxO Output(s)</b></MudText>
 								<TxOutputList Outputs="@SubmittedTransaction.RawTransaction.Outputs"/>
 							</div>
 						}

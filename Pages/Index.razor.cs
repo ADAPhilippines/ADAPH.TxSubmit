@@ -4,6 +4,7 @@ using MudBlazor;
 using ADAPH.TxSubmit.Services;
 using System.ComponentModel;
 using ADAPH.TxSubmit.Models;
+using System.Web;
 
 namespace ADAPH.TxSubmit.Pages;
 
@@ -13,8 +14,8 @@ public partial class Index : IDisposable
 	[Inject] private ILogger<Index>? _logger { get; set; }
 	[Inject] private TimeZoneService? TimeZoneService { get; set; }
 	[Inject] private GlobalStateService? GlobalStateService { get; set; }
-	[Inject] private HttpClient? Http { get; set; }
-	public ChartOptions chartOptions = new ChartOptions();
+	[Inject] private IHttpClientFactory? HttpClientFactory { get; set; }
+	public ChartOptions ChartOptions = new ChartOptions();
 	public List<ChartSeries> Series = new List<ChartSeries>();
 	public string[] XAxisLabels = { };
 	public bool IsJsInteropReady = false;
@@ -72,8 +73,8 @@ public partial class Index : IDisposable
 			Data = hourlyAverageConfirmationTimes.Select(d => d.Item2.TotalMinutes).ToArray()
 		});
 
-		chartOptions.YAxisTicks = 5;
-		chartOptions.ChartPalette = new string[] { "#594ae2ff", "#00c853ff" };
+		ChartOptions.YAxisTicks = 5;
+		ChartOptions.ChartPalette = new string[] { "#594ae2ff", "#00c853ff" };
 		await InvokeAsync(StateHasChanged);
 	}
 
@@ -158,17 +159,19 @@ public partial class Index : IDisposable
 	{
 		try 
 		{
-			if (Http is not null)
+			if (HttpClientFactory is not null)
 			{	
-				var txCbor64 = "hKYAgoJYIKwdWm8vPjLj+NlBqUUEgICKXcWk6zYRIMSjO5vL2crGAYJYID6LP0xHsM28IXua9cQ1UkK8NAupVd8aqDdZnNo76mzgAQGCglg5AbRL9LNobdmbC+0OUYaBOOfwgZUvQEn50k6vd8MnPDKRu7BV7EfIcm+G0BVja+aziR2qok3I82YUghoAHoSAoVgc+OHymaZ0Um6BsnxXyNHSzhSgS3FXH14DrOgYsqFLSURLYXRhbmFib2kBglg5AbRL9LNobdmbC+0OUYaBOOfwgZUvQEn50k6vd8MnPDKRu7BV7EfIcm+G0BVja+aziR2qok3I82YUGgBARh0CGgAHoSAHWCB7i/9EZJZje/oJdqSd3dSg53Q2yKZec1XU0qIvkaREYQmhWBz44fKZpnRSboGyfFfI0dLOFKBLcVcfXgOs6BiyoUtJREthdGFuYWJvaQEOgVgctEv0s2ht2ZsL7Q5RhoE45/CBlS9ASfnSTq93w6EBgYIAWBy0S/SzaG3ZmwvtDlGGgTjn8IGVL0BJ+dJOr3fD9aEZHMiheDhmOGUxZjI5OWE2NzQ1MjZlODFiMjdjNTdjOGQxZDJjZTE0YTA0YjcxNTcxZjVlMDNhY2U4MThiMqFrSURLYXRhbmFib2mhZmF2YXRhcqJocHJvdG9jb2xkaXBmc2NzcmN4LlFtTmhoaEpUWVBmU3Z3eXNhSDk4YnQ1NWdrNWk1YmhGRVVBQW1ackZFUXFYdjE=";
-				
-				var rawTx = await Http.GetFromJsonAsync<RawTransaction>($"https://tx.adaph.io/?txCbor64={txCbor64}");
+				var txCbor64 = string.Empty;
+				using var client = HttpClientFactory.CreateClient("tx-inspector");
+        var rawTx = await client.GetFromJsonAsync<RawTransaction>($"?txCbor64={HttpUtility.UrlEncode(txCbor64)}");
 				if(rawTx is null) return;
+
 				SubmittedTxs.Add(
 					new SubmittedTransaction
 					{
 						DateCreated = DateTime.UtcNow,
-						RawTransaction = rawTx
+						RawTransaction = rawTx,
+						Status = "Sent"
 					}
 				);
 			}

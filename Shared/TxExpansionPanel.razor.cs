@@ -8,12 +8,12 @@ public partial class TxExpansionPanel
 {
 	[Parameter] public SubmittedTransaction? SubmittedTransaction { get; set; }
 	private bool IsOpen { get; set; }
-	private MudBlazor.Color AmountColor { get; set; } = MudBlazor.Color.Success;
+	private MudBlazor.Color AmountColor { get; set; } = MudBlazor.Color.Secondary;
 	private Align AmountTextAlign { get; set; } = Align.Right;
 
 	private string GetTotalOutputTokens()
 	{
-		if (SubmittedTransaction is null || 
+		if (SubmittedTransaction is null ||
 				SubmittedTransaction.RawTransaction is null ||
 				SubmittedTransaction.RawTransaction.Outputs is null) return string.Empty;
 
@@ -32,17 +32,20 @@ public partial class TxExpansionPanel
 
 	private string GetOutputAmount()
 	{
-		if (SubmittedTransaction is null || 
-				SubmittedTransaction.RawTransaction is null || 
+		if (SubmittedTransaction is null ||
+				SubmittedTransaction.RawTransaction is null ||
 				SubmittedTransaction.RawTransaction.Outputs is null) return string.Empty;
 
-		var amount = string.Empty;
-		foreach (var utxo in SubmittedTransaction.RawTransaction.Outputs)
+		float amount = 0;
+		foreach (var output in SubmittedTransaction.RawTransaction.Outputs)
 		{
-			if (utxo.Amount is not null)
-				amount = utxo.Amount.Where(amount => amount.Unit == "lovelace").First().Quantity;
+			var adaAmounts = Utils.GetAdaAssets(output.Amount);
+			foreach (var ada in adaAmounts)
+			{
+				amount += float.Parse(ada.Quantity);
+			}
 		}
-		return amount;
+		return string.Format("{0:0.000000} ₳", amount);
 	}
 
 	private void OnBreakPointChanged(Breakpoint breakpoint)
