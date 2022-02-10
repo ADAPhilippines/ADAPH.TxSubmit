@@ -49,6 +49,10 @@ public class TransactionController : ControllerBase
       var result = await client.GetFromJsonAsync<JsonElement>($"?txCbor64={HttpUtility.UrlEncode(base64String)}");
 
       var isHypeSkullOwned = false;
+      var hypePolicyIds = new string[] {
+        "2f459a0a0872e299982d69e97f2affdb22919cafe1732de01ca4b36c",
+        "6f37a98bd0c9ced4e302ec2fb3a2f19ffba1b5c0c2bedee3dac30e56"
+      };
       if (result.TryGetProperty("inputs", out var inputs))
       {
         var stakeAddresses = inputs.EnumerateArray()
@@ -64,7 +68,7 @@ public class TransactionController : ControllerBase
           {
             var assets = await _bfAccountsService.GetAddressesAssetsAsync(stakeAddress, 100, page++);
             assetCount = assets.Count;
-            isHypeSkullOwned = assets.Any(a => a.Unit.Contains("2f459a0a0872e299982d69e97f2affdb22919cafe1732de01ca4b36c"));
+            isHypeSkullOwned = assets.Any(a => hypePolicyIds.Any(p => a.Unit.Contains(p)));
           }
           while(assetCount == 100 && !isHypeSkullOwned);
 
