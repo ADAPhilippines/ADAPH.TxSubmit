@@ -85,6 +85,12 @@ a, .btn-link {
     background: var(--mud-palette-primary);
 }
 
+
+.hype-logo {
+    height: 42px;
+    width: 120px;
+}
+
 #blazor-error-ui {
     display: none;
     position: fixed;
