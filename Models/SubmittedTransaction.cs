@@ -1,8 +1,16 @@
 namespace ADAPH.TxSubmit.Models;
 
+public enum TransactionStatus
+{
+	Pending,
+	Low,
+	Confirmed,
+	Rejected
+}
+
 public class SubmittedTransaction
 {
 	public DateTime DateCreated { get; set; }
 	public RawTransaction? RawTransaction { get; set; }
-	public string Status { get; set; } = string.Empty;
+	public TransactionStatus Status { get; set; } = TransactionStatus.Pending;
 }

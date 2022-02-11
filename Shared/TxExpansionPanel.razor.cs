@@ -7,10 +7,50 @@ namespace ADAPH.TxSubmit.Shared;
 public partial class TxExpansionPanel
 {
 	[Parameter] public SubmittedTransaction? SubmittedTransaction { get; set; }
+	[Inject] private TimeZoneService? TimeZoneService { get; set; }
 	private bool IsOpen { get; set; }
-	private MudBlazor.Color AmountColor { get; set; } = MudBlazor.Color.Secondary;
+	private MudBlazor.Color AmountColor { get; set; } = MudBlazor.Color.Success;
+	private MudBlazor.Color StatusChipColor { get; set; } = MudBlazor.Color.Success;
+	private string SideBarColorClass { get; set; } = string.Empty;
 	private Align AmountTextAlign { get; set; } = Align.Right;
+	private DateTimeOffset LocalDateTime { get; set; }
 
+	protected override async Task OnParametersSetAsync()
+	{
+		if(TimeZoneService is not null && SubmittedTransaction is not null)
+			LocalDateTime = await TimeZoneService.GetLocalDateTime(SubmittedTransaction.DateCreated);
+		SetStatusColor();
+		await InvokeAsync(StateHasChanged);
+	}
+
+	private void SetStatusColor()
+	{
+		if(SubmittedTransaction is not null)
+		{
+			switch(SubmittedTransaction.Status)
+			{
+				case TransactionStatus.Confirmed:
+					StatusChipColor = MudBlazor.Color.Success;
+					SideBarColorClass = "tx-expansion-sidebar tx-sidebar-confirmed";
+					break;
+				case TransactionStatus.Rejected:
+					StatusChipColor = MudBlazor.Color.Error;
+					SideBarColorClass = "tx-expansion-sidebar tx-sidebar-rejected";
+					break;
+				case TransactionStatus.Low:
+					StatusChipColor = MudBlazor.Color.Info;
+					SideBarColorClass = "tx-expansion-sidebar tx-sidebar-low";
+					break;
+				case TransactionStatus.Pending:
+					StatusChipColor = MudBlazor.Color.Warning;
+					SideBarColorClass = "tx-expansion-sidebar tx-sidebar-pending";
+					break;
+				default:
+					break;
+			}
+		}
+	}
+	
 	private string GetTotalOutputTokens()
 	{
 		if (SubmittedTransaction is null ||

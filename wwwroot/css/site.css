@@ -69,7 +69,7 @@ a, .btn-link {
     overflow-y: auto;
 }
 
-.tx-expansion-line {
+.tx-expansion-sidebar {
     height: 100% !important;
     top: 0 !important;
     left: 0px !important;
@@ -77,12 +77,25 @@ a, .btn-link {
     border-radius: 2px; 
 }
 
-.tx-expansion-panel:nth-child(odd) hr {
-    background: var(--mud-palette-tertiary);
+.tx-sidebar-confirmed {
+    background: var(--mud-palette-success) !important;
 }
 
-.tx-expansion-panel:nth-child(even) hr {
-    background: var(--mud-palette-primary);
+.tx-sidebar-rejected {
+    background: var(--mud-palette-error) !important;
+}
+
+.tx-sidebar-low {
+    background: var(--mud-palette-info) !important;
+}
+
+.tx-sidebar-pending {
+    background: var(--mud-palette-warning) !important;
+}
+
+
+.native-asset-color {
+    color: #FF7043 !important;
 }
 
 #blazor-error-ui {

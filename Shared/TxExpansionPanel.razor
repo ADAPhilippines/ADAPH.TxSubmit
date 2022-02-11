@@ -10,7 +10,7 @@
 						<MudItem Class="d-flex flex-column" xs="12" md="6">
 							<div class="d-inline-flex align-center">
 								<MudText Typo="@Typo.body1"><b>Transaction Id</b></MudText>
-								<MudChip Color="@Color.Success" Class="ml-2">@SubmittedTransaction.Status</MudChip>
+								<MudChip Color="@StatusChipColor" Class="ml-2">@SubmittedTransaction.Status</MudChip>
 							</div>
 							<div>
 								<MudText Typo="@Typo.body1" Class="word-break">@SubmittedTransaction.RawTransaction.Hash</MudText>
@@ -24,12 +24,12 @@
 					</MudGrid>
 					<div class="d-inline-flex align-center mt-4">
 						<MudIcon Icon="@(IsOpen ? Icons.Filled.KeyboardArrowUp : Icons.Filled.KeyboardArrowDown)"/>
-						<MudText Class="ml-2 word-break" Typo="@Typo.body1">@(String.Format("{0:F}", SubmittedTransaction.DateCreated))</MudText>
+						<MudText Class="ml-2 word-break" Typo="@Typo.body1">@(String.Format("{0:F}", LocalDateTime))</MudText>
 					</div>
 				</MudPaper>
 			</TitleContent>
 			<ChildContent>
-				<MudDivider Vertical="true" Absolute="true" Class="tx-expansion-line"/>
+				<MudDivider Vertical="true" Absolute="true" Class="@SideBarColorClass"/>
 				<MudGrid Spacing="0" Justify="@Justify.SpaceBetween">
 					<MudItem xs="12" md="6">
 						<MudPaper Elevation="0">

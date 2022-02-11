@@ -7,6 +7,9 @@ using ADAPH.TxSubmit.Models;
 using System.Web;
 using Blockfrost.Api.Services;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Logging;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace ADAPH.TxSubmit.Pages;
 
@@ -219,24 +222,28 @@ public partial class Index : IDisposable
 			if (HttpClientFactory is null) throw new Exception("HttpClientFactory is null.");
 
 			var transactionOwners = _dbContext.TransactionOwners.Where(txOwner => txOwner.OwnerAddress == stakeAddress)
+					.Include(to => to.Transaction)
 					.OrderByDescending(txOwner => txOwner.DateCreated)
 					.Take(20).ToArray();
 
 			using var client = HttpClientFactory.CreateClient("tx-inspector");
 			foreach (var transactionOwner in transactionOwners)
 			{
-				if (transactionOwner.Transaction is not null && transactionOwner.Transaction.TxBytes is not null)
+				var transaction = transactionOwner.Transaction;
+				if (transaction is not null && transaction.TxBytes is not null)
 				{
-					var txCbor64 = Convert.ToBase64String(transactionOwner.Transaction.TxBytes);
+					var txCbor64 = Convert.ToBase64String(transaction.TxBytes);
 					var rawTx = await client.GetFromJsonAsync<RawTransaction>($"?txCbor64={HttpUtility.UrlEncode(txCbor64)}");
+
 					if (rawTx is null) throw new Exception("Error occured while fetching transaction inspector response.");
 
+					var status = GetTxStatus(transaction.DateCreated, transaction.DateConfirmed);
 					SubmittedTxs.Add(
 						new SubmittedTransaction
 						{
 							DateCreated = transactionOwner.DateCreated,
 							RawTransaction = rawTx,
-							Status = "Submitted"
+							Status = status
 						}
 					);
 				}
@@ -244,9 +251,31 @@ public partial class Index : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine(ex.Message);
+			if (_logger is not null)
+				_logger.Log(LogLevel.Error, ex.Message);
 			Snackbar?.Add("An error has occured. Unable to retrieve transactions.", Severity.Error);
 		}
+	}
+
+
+	private TransactionStatus GetTxStatus(DateTime dateCreated, DateTime? dateConfirmed)
+	{
+		var currentDate = DateTime.UtcNow;
+		if (dateConfirmed is not null)
+		{
+			if (currentDate - dateConfirmed < TimeSpan.FromMinutes(5))
+				return TransactionStatus.Low;
+			if (currentDate - dateConfirmed >= TimeSpan.FromMinutes(5))
+				return TransactionStatus.Confirmed;
+		}
+		if (dateConfirmed is null)
+		{
+			if (currentDate - dateCreated < TimeSpan.FromDays(1))
+				return TransactionStatus.Pending;
+			if (currentDate - dateCreated >= TimeSpan.FromDays(1))
+				return TransactionStatus.Rejected;
+		}
+		return TransactionStatus.Pending;
 	}
 
 	private async Task<string> GetStakeAddressAsync(string walletAddress)
@@ -259,7 +288,8 @@ public partial class Index : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine(ex.Message);
+			if (_logger is not null)
+				_logger.Log(LogLevel.Error, ex.Message);
 			WalletAddressErrorMessage = "Wallet address is invalid.";
 			IsWalletAddressInvalid = true;
 			return string.Empty;

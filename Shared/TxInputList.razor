@@ -10,12 +10,17 @@
 				{
 					@foreach (var asset in Utils.GetAdaAssets(input.Amount))
 					{
-						<MudText Align="@TokenTextAlign" Class="mt-2 word-break" Color="@Color.Success">@asset.Quantity @asset.Unit</MudText>
+						<MudText Align="@TokenTextAlign" Class="mt-2 word-break" Color="@Color.Success">
+							<b>@asset.Quantity</b>
+							<span>@asset.Unit</span>
+						</MudText>
 					}
-					
 					@foreach (var asset in Utils.GetOtherAssets(input.Amount))
 					{
-						<MudText Align="@TokenTextAlign" Class="word-break">@asset.Quantity @asset.Unit</MudText>
+						<MudText Align="@TokenTextAlign" Class="word-break native-asset-color">
+							<b>@asset.Quantity</b>
+							<span>@(Utils.FormatUnitText(asset.Unit))</span>
+						</MudText>
 					}
 				}
 			</MudListItem>
