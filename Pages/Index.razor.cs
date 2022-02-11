@@ -38,6 +38,11 @@ public partial class Index : IDisposable
 	{
 		if (GlobalStateService is not null)
 			GlobalStateService.PropertyChanged += GlobalStateServicePropertyChanged;
+		if(_dbContext is not null)
+		{
+			_dbContext.Set<Transaction>().AsNoTracking();
+			_dbContext.Set<TransactionOwner>().AsNoTracking();
+		}
 		await base.OnInitializedAsync();
 	}
 
