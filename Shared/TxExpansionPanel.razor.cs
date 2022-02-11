@@ -36,13 +36,13 @@ public partial class TxExpansionPanel
 				SubmittedTransaction.RawTransaction is null ||
 				SubmittedTransaction.RawTransaction.Outputs is null) return string.Empty;
 
-		float amount = 0;
+		double amount = 0;
 		foreach (var output in SubmittedTransaction.RawTransaction.Outputs)
 		{
 			var adaAmounts = Utils.GetAdaAssets(output.Amount);
 			foreach (var ada in adaAmounts)
 			{
-				amount += float.Parse(ada.Quantity);
+				amount += double.Parse(ada.Quantity);
 			}
 		}
 		return string.Format("{0:0.000000} ₳", amount);

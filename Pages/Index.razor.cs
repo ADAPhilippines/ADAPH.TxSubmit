@@ -5,6 +5,8 @@ using ADAPH.TxSubmit.Services;
 using System.ComponentModel;
 using ADAPH.TxSubmit.Models;
 using System.Web;
+using Blockfrost.Api.Services;
+using Microsoft.AspNetCore.Components.Web;
 
 namespace ADAPH.TxSubmit.Pages;
 
@@ -15,6 +17,8 @@ public partial class Index : IDisposable
 	[Inject] private TimeZoneService? TimeZoneService { get; set; }
 	[Inject] private GlobalStateService? GlobalStateService { get; set; }
 	[Inject] private IHttpClientFactory? HttpClientFactory { get; set; }
+	[Inject] private IAddressesService? BlockfrostAddressService { get; set; }
+	[Inject] private ISnackbar? Snackbar { get; set; }
 	public ChartOptions ChartOptions = new ChartOptions();
 	public List<ChartSeries> Series = new List<ChartSeries>();
 	public string[] XAxisLabels = { };
@@ -22,6 +26,10 @@ public partial class Index : IDisposable
 	private List<SubmittedTransaction> SubmittedTxs { get; set; } = new();
 	private string ChartHeight { get; set; } = "450px";
 	private string TabBarClass { get; set; } = "full-width-tabs-toolbar";
+	private string WalletAddress { get; set; } = string.Empty;
+	private bool IsLoading { get; set; }
+	private string WalletAddressErrorMessage { get; set; } = "Wallet Address must not be empty.";
+	private bool IsWalletAddressInvalid { get; set; }
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -40,10 +48,18 @@ public partial class Index : IDisposable
 		if (firstRender)
 		{
 			IsJsInteropReady = true;
-			await InitializeTestTxsAsync();
 			if (GlobalStateService is not null)
 				await UpdateValuesAsync();
 
+			if (Snackbar is not null)
+			{
+				Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomCenter;
+				Snackbar.Configuration.MaxDisplayedSnackbars = 1;
+				Snackbar.Configuration.NewestOnTop = true;
+				Snackbar.Configuration.ShowTransitionDuration = 300;
+				Snackbar.Configuration.HideTransitionDuration = 300;
+				Snackbar.Configuration.VisibleStateDuration = 2000;
+			}
 		}
 		await base.OnAfterRenderAsync(firstRender);
 	}
@@ -56,14 +72,14 @@ public partial class Index : IDisposable
 		var hourlyAverageConfirmationTimes = GetHourlyAverageConfirmationTimes();
 
 		XAxisLabels = hourlyPendingTxs
-		  .Select(d => d.Item1.ToString("h tt"))
-		  .ToArray();
+			.Select(d => d.Item1.ToString("h tt"))
+			.ToArray();
 
 		Series.Clear();
 
 		Series.Add(new()
 		{
-			Name = "Txes Submitted",
+			Name = "Txs Submitted",
 			Data = hourlyPendingTxs.Select(d => (double)d.Item2).ToArray()
 		});
 
@@ -82,8 +98,7 @@ public partial class Index : IDisposable
 	{
 		var hourlyPendingTxes = new List<(DateTime, int)>();
 
-		if (_dbContext is null ||
-		  TimeZoneService is null || GlobalStateService is null) return hourlyPendingTxes;
+		if (TimeZoneService is null || GlobalStateService is null) return hourlyPendingTxes;
 
 		var txes = GlobalStateService.HourlyCreatedTxes;
 
@@ -93,8 +108,8 @@ public partial class Index : IDisposable
 		while (binDate <= currentDate)
 		{
 			var count = txes
-			  .Where(tx => tx.DateCreated < binDate && tx.DateCreated >= binDate.Subtract(TimeSpan.FromHours(1)))
-			  .Count();
+				.Where(tx => tx.DateCreated < binDate && tx.DateCreated >= binDate.Subtract(TimeSpan.FromHours(1)))
+				.Count();
 
 			var offset = await TimeZoneService.GetLocalDateTime(binDate);
 			hourlyPendingTxes.Add((offset.DateTime, count));
@@ -109,7 +124,7 @@ public partial class Index : IDisposable
 	{
 		var hourlyData = new List<(DateTime, TimeSpan)>();
 
-		if (_dbContext is null || GlobalStateService is null) return hourlyData;
+		if (GlobalStateService is null) return hourlyData;
 
 		var txes = GlobalStateService.HourlyConfirmedTxes;
 
@@ -152,33 +167,102 @@ public partial class Index : IDisposable
 		if (breakpoint >= Breakpoint.Md)
 			TabBarClass = "full-width-tabs-toolbar";
 		else
-			TabBarClass = "";
+			TabBarClass = string.Empty;
 	}
 
-	private async Task InitializeTestTxsAsync()
+	private async void OnConnectButtonClicked(MouseEventArgs args)
 	{
-		try 
-		{
-			if (HttpClientFactory is not null)
-			{	
-				var txCbor64 = string.Empty;
-				using var client = HttpClientFactory.CreateClient("tx-inspector");
-        var rawTx = await client.GetFromJsonAsync<RawTransaction>($"?txCbor64={HttpUtility.UrlEncode(txCbor64)}");
-				if(rawTx is null) return;
+		IsWalletAddressInvalid = false;
+		WalletAddress = string.Empty;
+		// Get wallets installed
+		// Display wallet selection
+		// Save selected wallet
+		// Get stake address
+		// Get Txs
+		await InvokeAsync(StateHasChanged);
+	}
 
-				SubmittedTxs.Add(
-					new SubmittedTransaction
-					{
-						DateCreated = DateTime.UtcNow,
-						RawTransaction = rawTx,
-						Status = "Sent"
-					}
-				);
+	private async void OnRetrieveTransactionsButtonClicked(MouseEventArgs args)
+	{
+		try
+		{
+			IsWalletAddressInvalid = false;
+			if (!string.IsNullOrEmpty(WalletAddress))
+			{
+				SubmittedTxs.Clear();
+				IsLoading = true;
+				await InvokeAsync(StateHasChanged);
+				// Fetch Txs
+				var stakeAddress = await GetStakeAddressAsync(WalletAddress);
+				await FetchSubmittedTxsAsync(stakeAddress);
+			}
+			else
+			{
+				WalletAddressErrorMessage = "Wallet Address must not be empty.";
+				IsWalletAddressInvalid = true;
 			}
 		}
-		catch(Exception ex)
+		catch (Exception ex)
 		{
 			Console.WriteLine(ex.Message);
+		}
+
+		IsLoading = false;
+		await InvokeAsync(StateHasChanged);
+	}
+
+	private async Task FetchSubmittedTxsAsync(string stakeAddress)
+	{
+		try
+		{
+			if (_dbContext is null) throw new Exception("DbContext is null.");
+			if (HttpClientFactory is null) throw new Exception("HttpClientFactory is null.");
+
+			var transactionOwners = _dbContext.TransactionOwners.Where(txOwner => txOwner.OwnerAddress == stakeAddress)
+					.OrderByDescending(txOwner => txOwner.DateCreated)
+					.Take(20).ToArray();
+
+			using var client = HttpClientFactory.CreateClient("tx-inspector");
+			foreach (var transactionOwner in transactionOwners)
+			{
+				if (transactionOwner.Transaction is not null && transactionOwner.Transaction.TxBytes is not null)
+				{
+					var txCbor64 = Convert.ToBase64String(transactionOwner.Transaction.TxBytes);
+					var rawTx = await client.GetFromJsonAsync<RawTransaction>($"?txCbor64={HttpUtility.UrlEncode(txCbor64)}");
+					if (rawTx is null) throw new Exception("Error occured while fetching transaction inspector response.");
+
+					SubmittedTxs.Add(
+						new SubmittedTransaction
+						{
+							DateCreated = transactionOwner.DateCreated,
+							RawTransaction = rawTx,
+							Status = "Submitted"
+						}
+					);
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine(ex.Message);
+			Snackbar?.Add("An error has occured. Unable to retrieve transactions.", Severity.Error);
+		}
+	}
+
+	private async Task<string> GetStakeAddressAsync(string walletAddress)
+	{
+		try
+		{
+			if (BlockfrostAddressService is null) throw new Exception("Blockfrost address service is null.");
+			var address = await BlockfrostAddressService.GetAddressesAsync(walletAddress);
+			return address.StakeAddress;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine(ex.Message);
+			WalletAddressErrorMessage = "Wallet address is invalid.";
+			IsWalletAddressInvalid = true;
+			return string.Empty;
 		}
 	}
 

@@ -1,10 +1,12 @@
-﻿@namespace ADAPH.TxSubmit.Pages
+﻿@using ADAPH.TxSubmit.Shared
+@namespace ADAPH.TxSubmit.Pages
 @page "/"
 
 <PageTitle>ADAPH | Cardano Tx Submit Service</PageTitle>
 <MudBreakpointProvider OnBreakpointChanged="@OnBreakPointChanged">
   <MudContainer Class="mt-8 container">
-    <MudTabs Rounded="true" ApplyEffectsToContainer="true" Elevation="3" PanelClass="pa-4" Centered="true" Class="@TabBarClass">
+    <MudTabs Rounded="true" ApplyEffectsToContainer="true" Elevation="3" PanelClass="pa-4" Centered="true"
+      Class="@TabBarClass">
       <MudTabPanel Text="Dashboard">
         <MudGrid Spacing="2" Justify="@Justify.Center">
           <MudItem xs="12" md="4">
@@ -65,9 +67,10 @@
         <MudHidden Breakpoint="@Breakpoint.MdAndUp" Invert="true">
           <MudGrid Spacing="4" Justify="@Justify.SpaceBetween" Class="align-center">
             <MudItem Class="d-inline-flex align-center" md="8">
-              <MudTextField Label="Enter wallet address" T="string" Variant="@Variant.Outlined" />
+              <MudTextField Label="Enter wallet address" T="string" @bind-Value="@WalletAddress" Variant="@Variant.Outlined" 
+                Error="@IsWalletAddressInvalid" ErrorText="@WalletAddressErrorMessage" />
               <MudButton Variant="@Variant.Filled" Color="@Color.Primary"
-                Class="ml-3 default-button rounded-md px-3 py-2">
+                Class="ml-3 default-button rounded-md px-3 py-2" OnClick="@OnRetrieveTransactionsButtonClicked">
                 Retrieve Transactions
               </MudButton>
             </MudItem>
@@ -81,19 +84,28 @@
               </MudButton>
             </MudItem>
           </MudGrid>
+          @if(IsLoading)
+          {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+          }
         </MudHidden>
         <MudHidden Breakpoint="@Breakpoint.MdAndUp" Invert="false">
           <MudGrid Spacing="2" Justify="@Justify.Center" Class="align-center">
             <MudItem xs="12" Class="d-flex align-center justify-center">
-              <MudTextField Label="Enter wallet address" T="string" Variant="@Variant.Outlined" />
+              <MudTextField Label="Enter wallet address" T="string" @bind-Value="@WalletAddress" Variant="@Variant.Outlined" 
+                Error="@IsWalletAddressInvalid" ErrorText="@WalletAddressErrorMessage" />
             </MudItem>
             <MudItem xs="12" Class="d-flex align-center justify-center">
               <MudButton Variant="@Variant.Filled" Color="@Color.Primary"
-                Class="mud-width-full default-button rounded-md px-3 py-2">
+                Class="mud-width-full default-button rounded-md px-3 py-2" OnClick="@OnRetrieveTransactionsButtonClicked">
                 Retrieve Transactions
               </MudButton>
             </MudItem>
           </MudGrid>
+          @if(IsLoading)
+          {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
+          }
         </MudHidden>
         <MudExpansionPanels Class="mt-4 tx-list" MultiExpansion="true">
           @foreach (var submittedTx in SubmittedTxs)
