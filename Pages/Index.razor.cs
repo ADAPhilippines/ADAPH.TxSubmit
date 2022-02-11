@@ -38,11 +38,7 @@ public partial class Index : IDisposable
 	{
 		if (GlobalStateService is not null)
 			GlobalStateService.PropertyChanged += GlobalStateServicePropertyChanged;
-		if(_dbContext is not null)
-		{
-			_dbContext.Set<Transaction>().AsNoTracking();
-			_dbContext.Set<TransactionOwner>().AsNoTracking();
-		}
+
 		await base.OnInitializedAsync();
 	}
 
@@ -226,7 +222,7 @@ public partial class Index : IDisposable
 			if (_dbContext is null) throw new Exception("DbContext is null.");
 			if (HttpClientFactory is null) throw new Exception("HttpClientFactory is null.");
 
-			var transactionOwners = _dbContext.TransactionOwners.Where(txOwner => txOwner.OwnerAddress == stakeAddress)
+			var transactionOwners = _dbContext.Set<TransactionOwner>().AsNoTracking().Where(txOwner => txOwner.OwnerAddress == stakeAddress)
 					.Include(to => to.Transaction)
 					.OrderByDescending(txOwner => txOwner.DateCreated)
 					.Take(20).ToArray();
