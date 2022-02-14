@@ -54,6 +54,7 @@ public class TransactionController : ControllerBase
         "2f459a0a0872e299982d69e97f2affdb22919cafe1732de01ca4b36c",
         "6f37a98bd0c9ced4e302ec2fb3a2f19ffba1b5c0c2bedee3dac30e56"
       };
+      var ownerStakeAddress = string.Empty;
       if (result.TryGetProperty("inputs", out var inputs))
       {
         var stakeAddresses = inputs.EnumerateArray()
@@ -73,7 +74,11 @@ public class TransactionController : ControllerBase
           }
           while(assetCount == 100 && !isHypeSkullOwned);
 
-          if(isHypeSkullOwned) break;
+          if(isHypeSkullOwned) 
+          {
+            ownerStakeAddress = stakeAddress;
+            break;
+          }
         }
       }
 
@@ -96,15 +101,19 @@ public class TransactionController : ControllerBase
           }
           while(assetCount == 100 && !isHypeSkullOwned);
 
-          if(isHypeSkullOwned) break;
+          if(isHypeSkullOwned) 
+          {
+            ownerStakeAddress = stakeAddress;
+            break;
+          }
         }
       }
 
-      if(isHypeSkullOwned)
+      if(isHypeSkullOwned && !string.IsNullOrEmpty(ownerStakeAddress))
       {
         var txId = await _transactionService.SubmitAsync(txBytes);
       
-        if (txId != null)
+        if (txId is not null)
         {
           var tx = new Transaction
           {
@@ -113,6 +122,14 @@ public class TransactionController : ControllerBase
             TxSize = txBytes.Length
           };
           _dbContext.Transactions.Add(tx);
+
+          var txOwner = new TransactionOwner
+          {
+            OwnerAddress = ownerStakeAddress,
+            Transaction = tx
+          };
+          _dbContext.TransactionOwners.Add(txOwner);
+
           await _dbContext.SaveChangesAsync();
 
           HttpContext.Response.StatusCode = 202;
@@ -120,11 +137,13 @@ public class TransactionController : ControllerBase
         }
         else
         {
+          _logger.LogInformation("TxHash is null");
           return BadRequest();
         }
       }
       else
       {
+        _logger.LogInformation($"No Associated Hypeskull found with sender.");
         return BadRequest();
       }
     }
