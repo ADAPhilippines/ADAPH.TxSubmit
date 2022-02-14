@@ -208,7 +208,8 @@ public partial class Index : IDisposable
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine(ex.Message);
+			if (_logger is not null)
+				_logger.Log(LogLevel.Error, ex.Message);
 		}
 
 		IsLoading = false;
@@ -247,6 +248,7 @@ public partial class Index : IDisposable
 							Status = status
 						}
 					);
+					await InvokeAsync(StateHasChanged);
 				}
 			}
 		}
