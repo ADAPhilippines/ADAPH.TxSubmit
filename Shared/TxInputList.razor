@@ -1,0 +1,29 @@
+@namespace ADAPH.TxSubmit.Shared
+<MudBreakpointProvider OnBreakpointChanged="@OnBreakPointChanged">
+	@if (Inputs is not null)
+	{
+		@foreach (var input in Inputs)
+		{
+			<MudListItem class="d-flex flex-col">
+				<MudText Align="@Align.Left" Class="word-break">@input.Address</MudText>
+				@if (input.Amount is not null)
+				{
+					@foreach (var asset in Utils.GetAdaAssets(input.Amount))
+					{
+						<MudText Align="@TokenTextAlign" Class="mt-2 word-break" Color="@Color.Success">
+							<b>@asset.Quantity</b>
+							<span>@asset.Unit</span>
+						</MudText>
+					}
+					@foreach (var asset in Utils.GetOtherAssets(input.Amount))
+					{
+						<MudText Align="@TokenTextAlign" Class="word-break native-asset-color">
+							<b>@asset.Quantity</b>
+							<span>@(Utils.FormatUnitText(asset.Unit))</span>
+						</MudText>
+					}
+				}
+			</MudListItem>
+		}
+	}
+	</MudBreakpointProvider>

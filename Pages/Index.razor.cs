@@ -4,6 +4,12 @@ using MudBlazor;
 using ADAPH.TxSubmit.Services;
 using System.ComponentModel;
 using ADAPH.TxSubmit.Models;
+using System.Web;
+using Blockfrost.Api.Services;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Logging;
+using System.Linq;
+using Microsoft.EntityFrameworkCore;
 
 namespace ADAPH.TxSubmit.Pages;
 
@@ -13,18 +19,26 @@ public partial class Index : IDisposable
 	[Inject] private ILogger<Index>? _logger { get; set; }
 	[Inject] private TimeZoneService? TimeZoneService { get; set; }
 	[Inject] private GlobalStateService? GlobalStateService { get; set; }
-	public ChartOptions chartOptions = new ChartOptions();
+	[Inject] private IHttpClientFactory? HttpClientFactory { get; set; }
+	[Inject] private IAddressesService? BlockfrostAddressService { get; set; }
+	[Inject] private ISnackbar? Snackbar { get; set; }
+	public ChartOptions ChartOptions = new ChartOptions();
 	public List<ChartSeries> Series = new List<ChartSeries>();
 	public string[] XAxisLabels = { };
 	public bool IsJsInteropReady = false;
-	private List<SubmittedTx> SubmittedTxs { get; set; } = new();
+	private List<SubmittedTransaction> SubmittedTxs { get; set; } = new();
 	private string ChartHeight { get; set; } = "450px";
 	private string TabBarClass { get; set; } = "full-width-tabs-toolbar";
+	private string WalletAddress { get; set; } = string.Empty;
+	private bool IsLoading { get; set; }
+	private string WalletAddressErrorMessage { get; set; } = "Wallet Address must not be empty.";
+	private bool IsWalletAddressInvalid { get; set; }
 
 	protected override async Task OnInitializedAsync()
 	{
 		if (GlobalStateService is not null)
 			GlobalStateService.PropertyChanged += GlobalStateServicePropertyChanged;
+
 		await base.OnInitializedAsync();
 	}
 
@@ -41,27 +55,35 @@ public partial class Index : IDisposable
 			if (GlobalStateService is not null)
 				await UpdateValuesAsync();
 
-			InitializeTestTxs();
+			if (Snackbar is not null)
+			{
+				Snackbar.Configuration.PositionClass = Defaults.Classes.Position.BottomCenter;
+				Snackbar.Configuration.MaxDisplayedSnackbars = 1;
+				Snackbar.Configuration.NewestOnTop = true;
+				Snackbar.Configuration.ShowTransitionDuration = 300;
+				Snackbar.Configuration.HideTransitionDuration = 300;
+				Snackbar.Configuration.VisibleStateDuration = 2000;
+			}
 		}
 		await base.OnAfterRenderAsync(firstRender);
 	}
 
 	private async Task UpdateValuesAsync()
 	{
-		if(!IsJsInteropReady) return;
-		
+		if (!IsJsInteropReady) return;
+
 		var hourlyPendingTxs = await GetHourlyTxesAsync();
 		var hourlyAverageConfirmationTimes = GetHourlyAverageConfirmationTimes();
 
 		XAxisLabels = hourlyPendingTxs
-		  .Select(d => d.Item1.ToString("h tt"))
-		  .ToArray();
+			.Select(d => d.Item1.ToString("h tt"))
+			.ToArray();
 
 		Series.Clear();
 
 		Series.Add(new()
 		{
-			Name = "Txes Submitted",
+			Name = "Txs Submitted",
 			Data = hourlyPendingTxs.Select(d => (double)d.Item2).ToArray()
 		});
 
@@ -71,8 +93,8 @@ public partial class Index : IDisposable
 			Data = hourlyAverageConfirmationTimes.Select(d => d.Item2.TotalMinutes).ToArray()
 		});
 
-		chartOptions.YAxisTicks = 5;
-		chartOptions.ChartPalette = new string[] { "#594ae2ff", "#00c853ff" };
+		ChartOptions.YAxisTicks = 5;
+		ChartOptions.ChartPalette = new string[] { "#594ae2ff", "#00c853ff" };
 		await InvokeAsync(StateHasChanged);
 	}
 
@@ -80,8 +102,7 @@ public partial class Index : IDisposable
 	{
 		var hourlyPendingTxes = new List<(DateTime, int)>();
 
-		if (_dbContext is null ||
-		  TimeZoneService is null || GlobalStateService is null) return hourlyPendingTxes;
+		if (TimeZoneService is null || GlobalStateService is null) return hourlyPendingTxes;
 
 		var txes = GlobalStateService.HourlyCreatedTxes;
 
@@ -91,8 +112,8 @@ public partial class Index : IDisposable
 		while (binDate <= currentDate)
 		{
 			var count = txes
-			  .Where(tx => tx.DateCreated < binDate && tx.DateCreated >= binDate.Subtract(TimeSpan.FromHours(1)))
-			  .Count();
+				.Where(tx => tx.DateCreated < binDate && tx.DateCreated >= binDate.Subtract(TimeSpan.FromHours(1)))
+				.Count();
 
 			var offset = await TimeZoneService.GetLocalDateTime(binDate);
 			hourlyPendingTxes.Add((offset.DateTime, count));
@@ -107,7 +128,7 @@ public partial class Index : IDisposable
 	{
 		var hourlyData = new List<(DateTime, TimeSpan)>();
 
-		if (_dbContext is null || GlobalStateService is null) return hourlyData;
+		if (GlobalStateService is null) return hourlyData;
 
 		var txes = GlobalStateService.HourlyConfirmedTxes;
 
@@ -134,7 +155,7 @@ public partial class Index : IDisposable
 
 		return hourlyData;
 	}
-	
+
 	private string FormatTimeSpan(TimeSpan ts)
 	{
 		return string.Format("{0:%h}H {0:%m}M {0:%s}S", ts);
@@ -150,87 +171,130 @@ public partial class Index : IDisposable
 		if (breakpoint >= Breakpoint.Md)
 			TabBarClass = "full-width-tabs-toolbar";
 		else
-			TabBarClass = "";
+			TabBarClass = string.Empty;
 	}
 
-	private void InitializeTestTxs()
+	private async void OnConnectButtonClicked(MouseEventArgs args)
 	{
-		var testInputs = new Utxo[]
-		{
-			new Utxo
-			{
-				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-				Amount = "1,128.623873",
-			},
-		};
+		IsWalletAddressInvalid = false;
+		WalletAddress = string.Empty;
+		// Get wallets installed
+		// Display wallet selection
+		// Save selected wallet
+		// Get stake address
+		// Get Txs
+		await InvokeAsync(StateHasChanged);
+	}
 
-		var testOutputs = new Utxo[]
+	private async void OnRetrieveTransactionsButtonClicked(MouseEventArgs args)
+	{
+		try
 		{
-			new Utxo
+			IsWalletAddressInvalid = false;
+			if (!string.IsNullOrEmpty(WalletAddress))
 			{
-				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-				Amount = "167.967772",
-				Assets = new Asset[]
+				SubmittedTxs.Clear();
+				IsLoading = true;
+				await InvokeAsync(StateHasChanged);
+				// Fetch Txs
+				var stakeAddress = await GetStakeAddressAsync(WalletAddress);
+				await FetchSubmittedTxsAsync(stakeAddress);
+			}
+			else
+			{
+				WalletAddressErrorMessage = "Wallet Address must not be empty.";
+				IsWalletAddressInvalid = true;
+			}
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine(ex.Message);
+		}
+
+		IsLoading = false;
+		await InvokeAsync(StateHasChanged);
+	}
+
+	private async Task FetchSubmittedTxsAsync(string stakeAddress)
+	{
+		try
+		{
+			if (_dbContext is null) throw new Exception("DbContext is null.");
+			if (HttpClientFactory is null) throw new Exception("HttpClientFactory is null.");
+
+			var transactionOwners = _dbContext.Set<TransactionOwner>().AsNoTracking().Where(txOwner => txOwner.OwnerAddress == stakeAddress)
+					.Include(to => to.Transaction)
+					.OrderByDescending(txOwner => txOwner.DateCreated)
+					.Take(20).ToArray();
+
+			using var client = HttpClientFactory.CreateClient("tx-inspector");
+			foreach (var transactionOwner in transactionOwners)
+			{
+				var transaction = transactionOwner.Transaction;
+				if (transaction is not null && transaction.TxBytes is not null)
 				{
-					new Asset {
-						Quantity = "1",
-						Name = "Token 1"
-					},
-					new Asset {
-						Quantity = "1",
-						Name = "Token 2"
-					},
+					var txCbor64 = Convert.ToBase64String(transaction.TxBytes);
+					var rawTx = await client.GetFromJsonAsync<RawTransaction>($"?txCbor64={HttpUtility.UrlEncode(txCbor64)}");
+
+					if (rawTx is null) throw new Exception("Error occured while fetching transaction inspector response.");
+
+					var status = GetTxStatus(transaction.DateCreated, transaction.DateConfirmed);
+					SubmittedTxs.Add(
+						new SubmittedTransaction
+						{
+							DateCreated = transactionOwner.DateCreated,
+							RawTransaction = rawTx,
+							Status = status
+						}
+					);
 				}
-			},
-		};
-
-		var testInputs2 = new Utxo[]
+			}
+		}
+		catch (Exception ex)
 		{
-			new Utxo
-			{
-				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-				Amount = "1,128.623873"
-			},
-		};
+			if (_logger is not null)
+				_logger.Log(LogLevel.Error, ex.Message);
+			Snackbar?.Add("An error has occured. Unable to retrieve transactions.", Severity.Error);
+		}
+	}
 
-		var testOutputs2 = new Utxo[]
+
+	private TransactionStatus GetTxStatus(DateTime dateCreated, DateTime? dateConfirmed)
+	{
+		var currentDate = DateTime.UtcNow;
+		if (dateConfirmed is not null)
 		{
-			new Utxo
-			{
-				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-				Amount = "167.967772"
-			},
-			new Utxo
-			{
-				Address = "addr1vx30za24ljla5mt6cjrpe80hsj9czgynczad9tkk5jxs47sta7g2n",
-				Amount = "167.967772"
-			},
-		};
-
-		var submittedTx1 = new SubmittedTx
+			if (currentDate - dateConfirmed < TimeSpan.FromMinutes(5))
+				return TransactionStatus.Low;
+			if (currentDate - dateConfirmed >= TimeSpan.FromMinutes(5))
+				return TransactionStatus.Confirmed;
+		}
+		if (dateConfirmed is null)
 		{
-			DateCreated = DateTime.UtcNow,
-			TxId = "7a509627decef8b7f81a0ca459e379cb727f23b5e5ef41272f8f676f472dbefc",
-			Amount = "129.93",
-			Fee = "0.656101",
-			Status = "Sent",
-			Inputs = testInputs,
-			Outputs = testOutputs
-		};
+			if (currentDate - dateCreated < TimeSpan.FromDays(1))
+				return TransactionStatus.Pending;
+			if (currentDate - dateCreated >= TimeSpan.FromDays(1))
+				return TransactionStatus.Rejected;
+		}
+		return TransactionStatus.Pending;
+	}
 
-		var submittedTx2 = new SubmittedTx
+	private async Task<string> GetStakeAddressAsync(string walletAddress)
+	{
+		try
 		{
-			DateCreated = DateTime.UtcNow,
-			TxId = "7a509627decef8b7f81a0ca459e379cb727f23b5e5ef41272f8f676f472dbefc",
-			Amount = "129.93",
-			Fee = "0.656101",
-			Status = "Sent",
-			Inputs = testInputs2,
-			Outputs = testOutputs2
-		};
-
-		SubmittedTxs.Add(submittedTx1);
-		SubmittedTxs.Add(submittedTx2);
+			if (BlockfrostAddressService is null) throw new Exception("Blockfrost address service is null.");
+			var address = await BlockfrostAddressService.GetAddressesAsync(walletAddress);
+			return address.StakeAddress;
+		}
+		catch (Exception ex)
+		{
+			if (_logger is not null)
+				_logger.Log(LogLevel.Error, ex.Message);
+			WalletAddressErrorMessage = "Wallet address is invalid.";
+			IsWalletAddressInvalid = true;
+			return string.Empty;
+		}
 	}
 
 	public void Dispose()
