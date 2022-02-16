@@ -42,40 +42,32 @@ public class TransactionController : ControllerBase
       using var ms = new MemoryStream();
       await Request.Body.CopyToAsync(ms);
       var txBytes = ms.ToArray();
-      var txId = await _transactionService.SubmitAsync(txBytes);
-    
-      if (txId != null)
+
+      using var client = _httpClientFactory.CreateClient("tx-inspector");
+      var base64String = Convert.ToBase64String(txBytes);
+      var result = await client.GetFromJsonAsync<JsonElement>($"?txCbor64={HttpUtility.UrlEncode(base64String)}");
+
+      if (result.TryGetProperty("inputs", out var inputs))
       {
+        var stakeAddresses = inputs.EnumerateArray()
+          .Select<JsonElement, string?>(el => ((el.GetProperty("stakeAddress").GetString()?.Length ?? 0) != 0) ? 
+              el.GetProperty("stakeAddress").GetString() : el.GetProperty("address").GetString())
+          .First(s => s is not null);
+
+        if(stakeAddresses is null) return BadRequest();
+
+        var txId = await _transactionService.SubmitAsync(txBytes);
+
+        if (txId is null) return BadRequest();
+
         var tx = new Transaction
         {
           TxHash = txId,
           TxBytes = txBytes,
           TxSize = txBytes.Length
         };
-        _dbContext.Transactions.Add(tx);
-
-        using var client = _httpClientFactory.CreateClient("tx-inspector");
-        var base64String = Convert.ToBase64String(txBytes);
-        var result = await client.GetFromJsonAsync<JsonElement>($"?txCbor64={HttpUtility.UrlEncode(base64String)}");
-
-        if (result.TryGetProperty("inputs", out var inputs))
-        {
-          var stakeAddresses = inputs.EnumerateArray()
-            .Select<JsonElement, string?>(el => ((el.GetProperty("stakeAddress").GetString()?.Length ?? 0) != 0) ? 
-                el.GetProperty("stakeAddress").GetString() : el.GetProperty("address").GetString())
-            .First(s => s is not null);
-
-          if(stakeAddresses is not null)
-          {
-            _dbContext.TransactionOwners.Add(new () 
-            {
-              OwnerAddress = stakeAddresses,
-              Transaction = tx
-            });
-          }
-        }
-
-        await _dbContext.SaveChangesAsync();
+        
+        _ = SaveTx(tx, stakeAddresses);
 
         HttpContext.Response.StatusCode = 202;
         return new JsonResult(txId);
@@ -90,5 +82,20 @@ public class TransactionController : ControllerBase
       _logger.LogError(ex.Message);
       return BadRequest();
     }
+  }
+
+  private async Task SaveTx(Transaction tx, string stakeAddress)
+  {
+    _dbContext.Transactions.Add(tx);
+
+    _dbContext.TransactionOwners.Add(new () 
+    {
+      OwnerAddress = stakeAddress,
+      Transaction = tx
+    });
+
+    await _dbContext.SaveChangesAsync();
+
+    _logger.LogInformation($"{tx.TxHash} has been saved to db.");
   }
 }
