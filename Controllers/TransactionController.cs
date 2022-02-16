@@ -66,8 +66,16 @@ public class TransactionController : ControllerBase
           TxBytes = txBytes,
           TxSize = txBytes.Length
         };
-        
-        _ = SaveTx(tx, stakeAddresses);
+
+        _dbContext.Transactions.Add(tx);
+
+        _dbContext.TransactionOwners.Add(new () 
+        {
+          OwnerAddress = stakeAddresses,
+          Transaction = tx
+        });
+
+        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
 
         HttpContext.Response.StatusCode = 202;
         return new JsonResult(txId);
@@ -82,20 +90,5 @@ public class TransactionController : ControllerBase
       _logger.LogError(ex.Message);
       return BadRequest();
     }
-  }
-
-  private async Task SaveTx(Transaction tx, string stakeAddress)
-  {
-    _dbContext.Transactions.Add(tx);
-
-    _dbContext.TransactionOwners.Add(new () 
-    {
-      OwnerAddress = stakeAddress,
-      Transaction = tx
-    });
-
-    await _dbContext.SaveChangesAsync();
-
-    _logger.LogInformation($"{tx.TxHash} has been saved to db.");
   }
 }
