@@ -81,10 +81,10 @@ public class TransactionWorker : BackgroundService
   {
     var averageConfirmationTime = _globalStateService.AverageConfirmationTime;
 
-    //Get Unconfirmed Txes that are less than 1 hour old
+    //Get Unconfirmed Txes that are less than 12 hours old
     var unconfirmedTxs = await dbContext.Transactions
        .Where(tx => tx.DateConfirmed == null && 
-          DateTime.UtcNow - tx.DateCreated < TimeSpan.FromHours(1))
+          DateTime.UtcNow - tx.DateCreated < TimeSpan.FromHours(12))
        .ToListAsync();
 
     if (unconfirmedTxs is null) return;
