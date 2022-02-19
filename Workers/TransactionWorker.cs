@@ -37,24 +37,24 @@ public class TransactionWorker : BackgroundService
         var optionsBuilder = new DbContextOptionsBuilder<TxSubmitDbContext>();
         using var _dbContext = new TxSubmitDbContext(Utils.BuilderDbContextOptions(optionsBuilder, _configuration).Options);
 
-        await CheckConfirmedTxAsync(_dbContext, stoppingToken);
-        await CheckUnconfirmedTxsAsync(_dbContext, stoppingToken);
+        await HardenTxConfirmationAsync(_dbContext, stoppingToken);
+        await SyncTxsAsync(_dbContext, stoppingToken);
       }
       catch (Exception ex)
       {
         _logger.LogError(ex.Message);
       }
-      
+
       await Task.Delay(1000 * 60, stoppingToken);
     }
   }
 
-  private async Task CheckConfirmedTxAsync(TxSubmitDbContext dbContext, CancellationToken stoppingToken)
+  private async Task HardenTxConfirmationAsync(TxSubmitDbContext dbContext, CancellationToken stoppingToken)
   {
     //Get confirmed Txs with less than 10 confirmations
     var confirmedTxs = await dbContext.Transactions
        .Where(tx => tx.DateConfirmed != null)
-       .Where(tx => tx.DateConfirmed >= DateTime.UtcNow.AddMinutes(-10))
+       .Where(tx => tx.DateConfirmed >= DateTime.UtcNow.AddSeconds(-200))
        .ToListAsync();
 
     if (confirmedTxs is null) return;
@@ -64,7 +64,7 @@ public class TransactionWorker : BackgroundService
       //Check if tx is still confirmed
       var isTxConfirmed = await IsTxConfirmedAsync(tx, stoppingToken);
 
-      if (!isTxConfirmed)
+      if (!isTxConfirmed && _configuration.GetValue<bool>("TxResubmission"))
       {
         //Tx may have been affected by a fork
         //Mark tx as unconfirmed to be resubmitted again
@@ -76,14 +76,14 @@ public class TransactionWorker : BackgroundService
     await dbContext.SaveChangesAsync();
   }
 
-  private async Task CheckUnconfirmedTxsAsync(TxSubmitDbContext dbContext, CancellationToken stoppingToken)
+  private async Task SyncTxsAsync(TxSubmitDbContext dbContext, CancellationToken stoppingToken)
   {
     var averageConfirmationTime = _globalStateService.AverageConfirmationTime;
 
     var unconfirmedTxs = await dbContext.Transactions
       .Where(tx => tx.DateConfirmed == null)
-      .Where(tx => tx.DateCreated >= DateTime.UtcNow.AddHours(-12))
-       .ToListAsync();
+      .Where(tx => tx.DateCreated >= DateTime.UtcNow.AddSeconds(_configuration.GetValue<int>("TxTtl")))
+      .ToListAsync();
 
     if (unconfirmedTxs is null) return;
 
@@ -96,7 +96,7 @@ public class TransactionWorker : BackgroundService
         //If tx is confirmed, updated db
         tx.DateConfirmed = DateTime.UtcNow;
       }
-      else
+      else if(_configuration.GetValue<bool>("TxResubmission"))
       {
         if (tx.TxBytes is null ||
           DateTime.UtcNow - tx.DateCreated < averageConfirmationTime) continue;
