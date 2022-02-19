@@ -3,3 +3,4 @@ appsettings.development.json
 **/bin/**
 **/obj/**
 .DS_Store
+txsubmit.db

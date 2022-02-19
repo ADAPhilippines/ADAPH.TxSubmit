@@ -12,9 +12,9 @@ public class TransactionWorker : BackgroundService
   private readonly TransactionService _txService;
   private readonly ILogger<TransactionWorker> _logger;
   private readonly IConfiguration _configuration;
-	private readonly GlobalStateService _globalStateService;
+  private readonly GlobalStateService _globalStateService;
 
-	public TransactionWorker(
+  public TransactionWorker(
     IConfiguration configuration,
     ITransactionsService bfTxService,
     ILogger<TransactionWorker> logger,
@@ -25,8 +25,8 @@ public class TransactionWorker : BackgroundService
     _logger = logger;
     _configuration = configuration;
     _txService = txService;
-		_globalStateService = globalStateService;
-	}
+    _globalStateService = globalStateService;
+  }
 
   protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
@@ -35,18 +35,17 @@ public class TransactionWorker : BackgroundService
       try
       {
         var optionsBuilder = new DbContextOptionsBuilder<TxSubmitDbContext>();
-        optionsBuilder.UseNpgsql(_configuration.GetConnectionString("TxSubmitDb"));
-        using var _dbContext = new TxSubmitDbContext(optionsBuilder.Options);
+        using var _dbContext = new TxSubmitDbContext(Utils.BuilderDbContextOptions(optionsBuilder, _configuration).Options);
 
         await CheckConfirmedTxAsync(_dbContext, stoppingToken);
         await CheckUnconfirmedTxsAsync(_dbContext, stoppingToken);
-
-        await Task.Delay(1000 * 60, stoppingToken);
       }
       catch (Exception ex)
       {
         _logger.LogError(ex.Message);
       }
+      
+      await Task.Delay(1000 * 60, stoppingToken);
     }
   }
 
@@ -54,18 +53,18 @@ public class TransactionWorker : BackgroundService
   {
     //Get confirmed Txs with less than 10 confirmations
     var confirmedTxs = await dbContext.Transactions
-       .Where(tx => tx.DateConfirmed != null && 
-          DateTime.UtcNow - tx.DateConfirmed < TimeSpan.FromSeconds(20 * 10))
+       .Where(tx => tx.DateConfirmed != null)
+       .Where(tx => tx.DateConfirmed >= DateTime.UtcNow.AddMinutes(-10))
        .ToListAsync();
 
     if (confirmedTxs is null) return;
 
-    foreach(var tx in confirmedTxs)
+    foreach (var tx in confirmedTxs)
     {
       //Check if tx is still confirmed
       var isTxConfirmed = await IsTxConfirmedAsync(tx, stoppingToken);
 
-      if(!isTxConfirmed)
+      if (!isTxConfirmed)
       {
         //Tx may have been affected by a fork
         //Mark tx as unconfirmed to be resubmitted again
@@ -81,10 +80,9 @@ public class TransactionWorker : BackgroundService
   {
     var averageConfirmationTime = _globalStateService.AverageConfirmationTime;
 
-    //Get Unconfirmed Txes that are less than 12 hours old
     var unconfirmedTxs = await dbContext.Transactions
-       .Where(tx => tx.DateConfirmed == null && 
-          DateTime.UtcNow - tx.DateCreated < TimeSpan.FromHours(12))
+      .Where(tx => tx.DateConfirmed == null)
+      .Where(tx => tx.DateCreated >= DateTime.UtcNow.AddHours(-12))
        .ToListAsync();
 
     if (unconfirmedTxs is null) return;
@@ -100,7 +98,7 @@ public class TransactionWorker : BackgroundService
       }
       else
       {
-        if(tx.TxBytes is null ||
+        if (tx.TxBytes is null ||
           DateTime.UtcNow - tx.DateCreated < averageConfirmationTime) continue;
 
         //if Tx is not confirmed,
@@ -111,7 +109,7 @@ public class TransactionWorker : BackgroundService
         var txId = await _txService.SubmitAsync(tx.TxBytes);
 
         //If tx is resubmitted succesfully, slide DateCreated Value
-        if(txId is not null && txId.Length == 64)
+        if (txId is not null && txId.Length == 64)
         {
           _logger.Log(LogLevel.Information, $"Transaction resubmitted: {tx.TxHash}");
           tx.DateCreated = DateTime.UtcNow;
