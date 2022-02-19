@@ -43,49 +43,52 @@ public class TransactionController : ControllerBase
       await Request.Body.CopyToAsync(ms);
       var txBytes = ms.ToArray();
 
-      using var client = _httpClientFactory.CreateClient("tx-inspector");
-      var base64String = Convert.ToBase64String(txBytes);
-      var result = await client.GetFromJsonAsync<JsonElement>($"?txCbor64={HttpUtility.UrlEncode(base64String)}");
+      var txId = await _transactionService.SubmitAsync(txBytes);
 
-      if (result.TryGetProperty("inputs", out var inputs))
+      if (txId is null) return BadRequest();
+
+      var tx = new Transaction
       {
-        var stakeAddresses = inputs.EnumerateArray()
-          .Select<JsonElement, string?>(el => ((el.GetProperty("stakeAddress").GetString()?.Length ?? 0) != 0) ? 
-              el.GetProperty("stakeAddress").GetString() : el.GetProperty("address").GetString())
-          .First(s => s is not null);
+        TxHash = txId,
+        TxBytes = txBytes,
+        TxSize = txBytes.Length
+      };
 
-        if(stakeAddresses is null) return BadRequest();
+      _dbContext.Transactions.Add(tx);
 
-        var txId = await _transactionService.SubmitAsync(txBytes);
-
-        if (txId is null) return BadRequest();
-
-        var tx = new Transaction
-        {
-          TxHash = txId,
-          TxBytes = txBytes,
-          TxSize = txBytes.Length
-        };
-
-        _dbContext.Transactions.Add(tx);
-
-        _dbContext.TransactionOwners.Add(new () 
-        {
-          OwnerAddress = stakeAddresses,
-          Transaction = tx
-        });
-
-        await _dbContext.SaveChangesAsync().ConfigureAwait(false);
-
-        HttpContext.Response.StatusCode = 202;
-        return new JsonResult(txId);
-      }
-      else
+      if (_configuration.GetValue<bool>("TxTracking"))
       {
-        return BadRequest();
+        using var client = _httpClientFactory.CreateClient("tx-inspector");
+        var base64String = Convert.ToBase64String(txBytes);
+        var result = await client.GetFromJsonAsync<JsonElement>($"?txCbor64={HttpUtility.UrlEncode(base64String)}");
+
+        if (result.TryGetProperty("inputs", out var inputs))
+        {
+          var stakeAddresses = inputs.EnumerateArray()
+            .Select<JsonElement, string?>(el => ((el.GetProperty("stakeAddress").GetString()?.Length ?? 0) != 0) ?
+                el.GetProperty("stakeAddress").GetString() : el.GetProperty("address").GetString())
+            .First(s => s is not null);
+
+          if (stakeAddresses is null) return BadRequest();
+
+          _dbContext.TransactionOwners.Add(new()
+          {
+            OwnerAddress = stakeAddresses,
+            Transaction = tx
+          });
+        }
+        else
+        {
+          return BadRequest();
+        }
       }
+
+      await _dbContext.SaveChangesAsync().ConfigureAwait(false);
+
+      HttpContext.Response.StatusCode = 202;
+      return new JsonResult(txId);
     }
-    catch(Exception ex)
+    catch (Exception ex)
     {
       _logger.LogError(ex.Message);
       return BadRequest();
