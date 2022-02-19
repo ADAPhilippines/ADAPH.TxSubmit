@@ -28,7 +28,7 @@ public class DbWorker : BackgroundService
       {
         try
         {
-          _logger.LogInformation("Refreshing data...");
+          _logger.LogInformation("Refreshing data");
           await UpdateValuesAsync();
         }
         catch (Exception ex)
@@ -38,7 +38,7 @@ public class DbWorker : BackgroundService
       }
       else
       {
-        throw new NullReferenceException("Logger is null.");
+        throw new NullReferenceException("Logger is null");
       }
       await Task.Delay(TimeSpan.FromSeconds(60));
     }
