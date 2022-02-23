@@ -67,4 +67,7 @@ app.UseCors("AllowCors");
 app.UseEndpoints(endpoints => endpoints.MapControllers());
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
+
+var serviceScope = app.Services.CreateScope();
+serviceScope.ServiceProvider.GetRequiredService<TxSubmitDbContext>().Database.EnsureCreated();
 app.Run();

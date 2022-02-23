@@ -86,7 +86,7 @@ public class TransactionWorker : BackgroundService
       .ToListAsync();
 
     if (unconfirmedTxs is null) return;
-
+  
     _logger.Log(LogLevel.Information, $"Checking for unconfirmed transactions: {unconfirmedTxs.Count}");
     foreach (var tx in unconfirmedTxs)
     {
